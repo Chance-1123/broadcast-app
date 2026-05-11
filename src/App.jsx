@@ -101,14 +101,14 @@ function downloadSchedule(rows){
   XLSX.writeFile(wb,`방송편성표_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-const bd=(c)=>{const m={red:{bg:"#FCEBEB",fg:"#A32D2D"},green:{bg:"#E1F5EE",fg:"#0F6E56"},blue:{bg:"#E6F1FB",fg:"#185FA5"},amber:{bg:"#FAEEDA",fg:"#854F0B"},gray:{bg:"#f0f0ee",fg:"#666"}};const x=m[c]||m.gray;return{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:500,background:x.bg,color:x.fg};};
-const btn={display:"inline-flex",alignItems:"center",gap:5,padding:"0 14px",height:34,borderRadius:8,border:"0.5px solid #ccc",fontSize:13,cursor:"pointer",background:"#fff",color:"#333",fontFamily:"inherit"};
+const bd=(c)=>{const m={red:{bg:"#FCEBEB",fg:"#A32D2D"},green:{bg:"#E1F5EE",fg:"#0F6E56"},blue:{bg:"#E6F1FB",fg:"#185FA5"},amber:{bg:"#FAEEDA",fg:"#854F0B"},gray:{bg:"#f0f0ee",fg:"#666"}};const x=m[c]||m.gray;return{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:20,fontSize:16,fontWeight:500,background:x.bg,color:x.fg};};
+const btn={display:"inline-flex",alignItems:"center",gap:5,padding:"0 14px",height:34,borderRadius:8,border:"0.5px solid #ccc",fontSize:20,cursor:"pointer",background:"#fff",color:"#333",fontFamily:"inherit"};
 const btnP={...btn,background:"#1D9E75",borderColor:"#1D9E75",color:"#fff"};
 const btnR={...btn,background:"#FCEBEB",borderColor:"#F09595",color:"#A32D2D"};
 const btnB={...btn,background:"#E6F1FB",borderColor:"#B5D4F4",color:"#185FA5"};
 const panel={background:"#fff",border:"0.5px solid #e5e5e3",borderRadius:12,padding:"16px 18px",marginBottom:12};
-const inp={width:"100%",height:36,padding:"0 10px",borderRadius:8,border:"0.5px solid #ccc",fontSize:13,fontFamily:"inherit",background:"#fff",color:"#1c1c1a",boxSizing:"border-box"};
-const lbl={fontSize:12,fontWeight:500,color:"#555",marginBottom:4,display:"block"};
+const inp={width:"100%",height:36,padding:"0 10px",borderRadius:8,border:"0.5px solid #ccc",fontSize:20,fontFamily:"inherit",background:"#fff",color:"#1c1c1a",boxSizing:"border-box"};
+const lbl={fontSize:18,fontWeight:500,color:"#555",marginBottom:4,display:"block"};
 
 function BookingForm({initial,onSave,onClose,title}){
   const [form,setForm]=useState(initial||{장소:"",날짜:"",구분:"강의",주제:"",내용:"",강사명:"",시작시간:"09:00",종료시간:"18:00",요일:""});
@@ -125,7 +125,7 @@ function BookingForm({initial,onSave,onClose,title}){
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:"#fff",borderRadius:16,width:500,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 12px 40px rgba(0,0,0,0.2)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"0.5px solid #e5e5e3",position:"sticky",top:0,background:"#fff"}}>
-          <div style={{fontSize:16,fontWeight:600}}>{title}</div>
+          <div style={{fontSize:24,fontWeight:600}}>{title}</div>
           <button style={{...btn,height:28,padding:"0 10px"}} onClick={onClose}>✕</button>
         </div>
         <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:12}}>
@@ -133,7 +133,7 @@ function BookingForm({initial,onSave,onClose,title}){
             <span style={lbl}>스튜디오 *</span>
             <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:6}}>
               {STUDIOS.map(s=>(
-                <label key={s.id} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 10px",border:`1.5px solid ${form.장소===s.id?s.color:"#e5e5e3"}`,borderRadius:8,cursor:"pointer",background:form.장소===s.id?`${s.color}10`:"#fff",fontSize:12}}>
+                <label key={s.id} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 10px",border:`1.5px solid ${form.장소===s.id?s.color:"#e5e5e3"}`,borderRadius:8,cursor:"pointer",background:form.장소===s.id?`${s.color}10`:"#fff",fontSize:18}}>
                   <input type="radio" name="bst" style={{display:"none"}} checked={form.장소===s.id} onChange={()=>set("장소",s.id)}/>
                   <span style={{width:9,height:9,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
                   {s.id}{form.장소===s.id&&<span style={{marginLeft:"auto",color:s.color,fontWeight:700}}>✓</span>}
@@ -145,7 +145,7 @@ function BookingForm({initial,onSave,onClose,title}){
             <span style={lbl}>구분 *</span>
             <div style={{display:"flex",gap:6}}>
               {["방송준비","강의"].map(g=>(
-                <label key={g} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 18px",border:`1.5px solid ${form.구분===g?"#378ADD":"#e5e5e3"}`,borderRadius:8,cursor:"pointer",fontSize:12,background:form.구분===g?"#F0F6FF":"#fff"}}>
+                <label key={g} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 18px",border:`1.5px solid ${form.구분===g?"#378ADD":"#e5e5e3"}`,borderRadius:8,cursor:"pointer",fontSize:18,background:form.구분===g?"#F0F6FF":"#fff"}}>
                   <input type="radio" name="bgb" style={{display:"none"}} checked={form.구분===g} onChange={()=>set("구분",g)}/>{g}
                 </label>
               ))}
@@ -154,17 +154,17 @@ function BookingForm({initial,onSave,onClose,title}){
           <div>
             <span style={lbl}>날짜 *</span>
             <input type="date" style={inp} value={form.날짜} onChange={e=>set("날짜",e.target.value)}/>
-            {form.요일&&<div style={{fontSize:11,color:"#1D9E75",marginTop:3}}>{form.요일}요일</div>}
+            {form.요일&&<div style={{fontSize:16,color:"#1D9E75",marginTop:3}}>{form.요일}요일</div>}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><span style={lbl}>시작 시간 *</span><input type="time" style={inp} value={form.시작시간} onChange={e=>set("시작시간",e.target.value)}/></div>
             <div><span style={lbl}>종료 시간 *</span><input type="time" style={inp} value={form.종료시간} onChange={e=>set("종료시간",e.target.value)}/></div>
           </div>
-          {len&&<div style={{fontSize:12,color:"#1D9E75",fontWeight:500}}>⏱ 총 {len}</div>}
+          {len&&<div style={{fontSize:18,color:"#1D9E75",fontWeight:500}}>⏱ 총 {len}</div>}
           <div><span style={lbl}>주제</span><input type="text" style={inp} placeholder="예: 코딩 Live Django트랙" value={form.주제} onChange={e=>set("주제",e.target.value)}/></div>
           <div><span style={lbl}>내용</span><input type="text" style={inp} placeholder="예: Django : DRF 1" value={form.내용} onChange={e=>set("내용",e.target.value)}/></div>
           <div><span style={lbl}>강사명</span><input type="text" style={inp} placeholder="예: 김준호 강사" value={form.강사명} onChange={e=>set("강사명",e.target.value)}/></div>
-          {err&&<div style={{fontSize:12,color:"#E24B4A",background:"#FFF0F0",padding:"8px 12px",borderRadius:8}}>{err}</div>}
+          {err&&<div style={{fontSize:18,color:"#E24B4A",background:"#FFF0F0",padding:"8px 12px",borderRadius:8}}>{err}</div>}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:4,borderTop:"0.5px solid #f0f0ee"}}>
             <button style={btn} onClick={onClose}>취소</button>
             <button style={btnP} onClick={save}>{title==="예약 수정"?"수정 저장":"예약 등록"}</button>
@@ -179,14 +179,14 @@ function CancelModal({row,onClose,onConfirm}){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
       <div style={{background:"#fff",borderRadius:16,width:380,padding:"24px",boxShadow:"0 12px 40px rgba(0,0,0,0.2)"}}>
-        <div style={{fontSize:16,fontWeight:600,marginBottom:12}}>예약을 취소하시겠습니까?</div>
-        <div style={{fontSize:13,color:"#555",marginBottom:12,lineHeight:1.9,background:"#f8f8f6",borderRadius:8,padding:"10px 14px"}}>
+        <div style={{fontSize:24,fontWeight:600,marginBottom:12}}>예약을 취소하시겠습니까?</div>
+        <div style={{fontSize:20,color:"#555",marginBottom:12,lineHeight:1.9,background:"#f8f8f6",borderRadius:8,padding:"10px 14px"}}>
           <div><b>스튜디오:</b> {row?.장소}</div>
           <div><b>날짜:</b> {row?.날짜} {row?.요일&&`(${row.요일}요일)`}</div>
           <div><b>시간:</b> {row?.시작시간} ~ {row?.종료시간}</div>
           <div><b>내용:</b> {row?.내용||row?.주제||"-"}</div>
         </div>
-        <div style={{background:"#FFF8F8",border:"0.5px solid #F09595",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#A32D2D",marginBottom:16}}>⚠ 취소된 예약은 복구할 수 없습니다.</div>
+        <div style={{background:"#FFF8F8",border:"0.5px solid #F09595",borderRadius:8,padding:"8px 12px",fontSize:18,color:"#A32D2D",marginBottom:16}}>⚠ 취소된 예약은 복구할 수 없습니다.</div>
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button style={btn} onClick={onClose}>돌아가기</button>
           <button style={btnR} onClick={onConfirm}>예약 취소 확인</button>
@@ -201,12 +201,12 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel}){
   return(
     <div style={{position:"fixed",top:Math.min(pos.y+10,window.innerHeight-340),left:Math.min(pos.x+10,window.innerWidth-290),zIndex:3000,background:"#fff",borderRadius:12,border:"0.5px solid #e5e5e3",boxShadow:"0 8px 28px rgba(0,0,0,0.18)",width:270,padding:"14px 16px"}} onClick={e=>e.stopPropagation()}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-        <span style={{display:"flex",alignItems:"center",gap:6,fontWeight:600,fontSize:13,color}}>
+        <span style={{display:"flex",alignItems:"center",gap:6,fontWeight:600,fontSize:20,color}}>
           <span style={{width:10,height:10,borderRadius:"50%",background:color}}></span>{row.장소}
         </span>
-        <button style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa"}} onClick={onClose}>✕</button>
+        <button style={{background:"none",border:"none",cursor:"pointer",fontSize:24,color:"#aaa"}} onClick={onClose}>✕</button>
       </div>
-      <div style={{fontSize:12,lineHeight:2,color:"#444",borderBottom:"0.5px solid #f0f0ee",paddingBottom:10,marginBottom:10}}>
+      <div style={{fontSize:18,lineHeight:2,color:"#444",borderBottom:"0.5px solid #f0f0ee",paddingBottom:10,marginBottom:10}}>
         {row._conflict&&<div style={{color:"#E24B4A",fontWeight:600,marginBottom:4}}>⚠ 충돌</div>}
         <div><b>구분:</b> {row.구분}</div>
         <div><b>내용:</b> {row.내용||row.주제||"-"}</div>
@@ -216,8 +216,8 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel}){
         {row.길이&&<div><b>길이:</b> {row.길이}</div>}
       </div>
       <div style={{display:"flex",gap:6}}>
-        <button style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onEdit(idx);onClose();}}>✏ 수정</button>
-        <button style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onCancel(idx);onClose();}}>✕ 취소</button>
+        <button style={{...btn,flex:1,height:30,fontSize:18,justifyContent:"center"}} onClick={()=>{onEdit(idx);onClose();}}>✏ 수정</button>
+        <button style={{...btnR,flex:1,height:30,fontSize:18,justifyContent:"center"}} onClick={()=>{onCancel(idx);onClose();}}>✕ 취소</button>
       </div>
     </div>
   );
@@ -249,15 +249,15 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
       <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
         <thead>
           <tr style={{position:"sticky",top:0,zIndex:2}}>
-            <th style={{width:58,padding:"8px 6px",background:"#f8f8f6",borderBottom:"2px solid #e5e5e3",borderRight:"0.5px solid #e5e5e3",fontSize:11,fontWeight:600,color:"#888",textAlign:"center"}}>시간</th>
+            <th style={{width:58,padding:"8px 6px",background:"#f8f8f6",borderBottom:"2px solid #e5e5e3",borderRight:"0.5px solid #e5e5e3",fontSize:16,fontWeight:600,color:"#888",textAlign:"center"}}>시간</th>
             {DAYS.map((day,di)=>{
               const isToday=fmtFull(new Date())===dayDates[di];
               const dayCount=rows.filter(r=>r.날짜===dayDates[di]&&r.장소).length;
               return(
-                <th key={day} style={{padding:"8px 6px",background:isToday?"#F0FBF6":"#f8f8f6",borderBottom:"2px solid #e5e5e3",borderRight:"0.5px solid #e5e5e3",fontSize:12,fontWeight:700,color:isToday?"#1D9E75":"#222",textAlign:"center"}}>
+                <th key={day} style={{padding:"8px 6px",background:isToday?"#F0FBF6":"#f8f8f6",borderBottom:"2px solid #e5e5e3",borderRight:"0.5px solid #e5e5e3",fontSize:18,fontWeight:700,color:isToday?"#1D9E75":"#222",textAlign:"center"}}>
                   <div>{day}요일</div>
-                  <div style={{fontSize:10,fontWeight:400,color:isToday?"#1D9E75":"#aaa"}}>{fmtShort(addDays(monday,di))}</div>
-                  {dayCount>0&&<div style={{fontSize:9,color:isToday?"#1D9E75":"#aaa",marginTop:1}}>{dayCount}건</div>}
+                  <div style={{fontSize:15,fontWeight:400,color:isToday?"#1D9E75":"#aaa"}}>{fmtShort(addDays(monday,di))}</div>
+                  {dayCount>0&&<div style={{fontSize:14,color:isToday?"#1D9E75":"#aaa",marginTop:1}}>{dayCount}건</div>}
                 </th>
               );
             })}
@@ -268,7 +268,7 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
             <tr key={hour} style={{background:hi%2===0?"#fff":"#fafafa"}}>
               {/* 시간 셀 */}
               <td style={{padding:"6px 4px",borderBottom:"0.5px solid #f0f0ee",borderRight:"0.5px solid #e5e5e3",textAlign:"center",verticalAlign:"top",background:hi%2===0?"#fafaf9":"#f5f5f4"}}>
-                <span style={{fontSize:11,fontWeight:600,color:"#aaa"}}>{hour}</span>
+                <span style={{fontSize:16,fontWeight:600,color:"#aaa"}}>{hour}</span>
               </td>
               {/* 요일별 셀 */}
               {DAYS.map((day,di)=>{
@@ -289,7 +289,7 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
                 return(
                   <td key={day} style={{padding:"3px 4px",borderBottom:"0.5px solid #f0f0ee",borderRight:"0.5px solid #e5e5e3",verticalAlign:"top",minHeight:36,background:isToday?"rgba(29,158,117,0.02)":"transparent"}}>
                     {startBlocks.length===0&&continueBlocks.length===0&&(
-                      <div style={{height:32,display:"flex",alignItems:"center",justifyContent:"center",color:"#f0f0ee",fontSize:10}}>·</div>
+                      <div style={{height:32,display:"flex",alignItems:"center",justifyContent:"center",color:"#f0f0ee",fontSize:15}}>·</div>
                     )}
                     {/* 이어지는 블록 (연한 표시) */}
                     {continueBlocks.map((b,bi)=>{
@@ -297,7 +297,7 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
                       return(
                         <div key={`c${bi}`} style={{borderLeft:`3px solid ${color}`,background:`${color}08`,borderRadius:"0 4px 4px 0",padding:"2px 5px",marginBottom:2,cursor:"pointer",opacity:0.7}}
                           onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:conflictIdxs.has(b.idx)},idx:b.idx,x:e.clientX,y:e.clientY});}}>
-                          <div style={{fontSize:9,color,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>↑ {b.장소}</div>
+                          <div style={{fontSize:14,color,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>↑ {b.장소}</div>
                         </div>
                       );
                     })}
@@ -316,18 +316,18 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
                           onMouseEnter={e=>e.currentTarget.style.boxShadow=`0 2px 8px ${color}40`}
                           onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}
                         >
-                          {isCf&&<div style={{fontSize:8,color:"#E24B4A",fontWeight:700}}>⚠ 충돌</div>}
-                          <div style={{fontSize:9,fontWeight:700,color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                          {isCf&&<div style={{fontSize:12,color:"#E24B4A",fontWeight:700}}>⚠ 충돌</div>}
+                          <div style={{fontSize:14,fontWeight:700,color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                             {b.장소}
                           </div>
-                          <div style={{fontSize:9,fontWeight:600,color:"#333",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                          <div style={{fontSize:14,fontWeight:600,color:"#333",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                             {isPrep?"📋 방송준비":shortContent||b.주제||b.내용}
                           </div>
-                          {b.강사명&&<div style={{fontSize:8,color:"#888",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>👤 {b.강사명}</div>}
-                          <div style={{fontSize:8,color:"#aaa"}}>{b.시작시간}~{b.종료시간}{dur?` (${dur})`:""}</div>
+                          {b.강사명&&<div style={{fontSize:12,color:"#888",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>👤 {b.강사명}</div>}
+                          <div style={{fontSize:12,color:"#aaa"}}>{b.시작시간}~{b.종료시간}{dur?` (${dur})`:""}</div>
                           <div style={{display:"flex",gap:2,marginTop:3}}>
-                            <button style={{flex:1,background:"rgba(255,255,255,0.9)",border:`0.5px solid ${color}`,borderRadius:3,fontSize:8,cursor:"pointer",padding:"1px 0",color,fontWeight:700}} onClick={e=>{e.stopPropagation();onEdit(b.idx);}}>✏ 수정</button>
-                            <button style={{flex:1,background:"rgba(255,255,255,0.9)",border:"0.5px solid #F09595",borderRadius:3,fontSize:8,cursor:"pointer",padding:"1px 0",color:"#A32D2D",fontWeight:700}} onClick={e=>{e.stopPropagation();onCancel(b.idx);}}>✕ 취소</button>
+                            <button style={{flex:1,background:"rgba(255,255,255,0.9)",border:`0.5px solid ${color}`,borderRadius:3,fontSize:12,cursor:"pointer",padding:"1px 0",color,fontWeight:700}} onClick={e=>{e.stopPropagation();onEdit(b.idx);}}>✏ 수정</button>
+                            <button style={{flex:1,background:"rgba(255,255,255,0.9)",border:"0.5px solid #F09595",borderRadius:3,fontSize:12,cursor:"pointer",padding:"1px 0",color:"#A32D2D",fontWeight:700}} onClick={e=>{e.stopPropagation();onCancel(b.idx);}}>✕ 취소</button>
                           </div>
                         </div>
                       );
@@ -360,8 +360,8 @@ function LiveBanner({rows}){
   if(live.length===0) return(
     <div style={{display:"flex",alignItems:"center",gap:10,background:"#f8f8f6",border:"0.5px solid #e5e5e3",borderRadius:10,padding:"10px 16px",marginBottom:10}}>
       <div style={{width:8,height:8,borderRadius:"50%",background:"#ccc"}}></div>
-      <span style={{fontSize:12,color:"#aaa"}}>현재 진행 중인 라이브 방송이 없습니다</span>
-      <span style={{marginLeft:"auto",fontSize:11,color:"#ccc"}}>{String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준</span>
+      <span style={{fontSize:18,color:"#aaa"}}>현재 진행 중인 라이브 방송이 없습니다</span>
+      <span style={{marginLeft:"auto",fontSize:16,color:"#ccc"}}>{String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준</span>
     </div>
   );
   const cur=live[rollIdx%live.length];
@@ -373,27 +373,27 @@ function LiveBanner({rows}){
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
       <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
         <div style={{width:8,height:8,borderRadius:"50%",background:"#E24B4A",animation:"pulse 1.2s infinite"}}></div>
-        <span style={{fontSize:11,fontWeight:700,color:"#E24B4A",letterSpacing:"0.5px"}}>LIVE</span>
+        <span style={{fontSize:16,fontWeight:700,color:"#E24B4A",letterSpacing:"0.5px"}}>LIVE</span>
       </div>
       <div style={{width:1,height:28,background:`${color}40`,flexShrink:0}}></div>
       <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
         <span style={{width:8,height:8,borderRadius:"50%",background:color}}></span>
-        <span style={{fontSize:12,fontWeight:700,color}}>{cur.장소}</span>
+        <span style={{fontSize:18,fontWeight:700,color}}>{cur.장소}</span>
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <span style={{fontSize:12,fontWeight:600,color:"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{shortContent||content}</span>
-        {cur.강사명&&<span style={{fontSize:11,color:"#666"}}>👤 {cur.강사명}</span>}
+        <span style={{fontSize:18,fontWeight:600,color:"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{shortContent||content}</span>
+        {cur.강사명&&<span style={{fontSize:16,color:"#666"}}>👤 {cur.강사명}</span>}
       </div>
       <div style={{flexShrink:0,textAlign:"right"}}>
-        <div style={{fontSize:11,fontWeight:600,color}}>{cur.시작시간}~{cur.종료시간}</div>
-        {cur.길이&&<div style={{fontSize:10,color:"#aaa"}}>{cur.길이}</div>}
+        <div style={{fontSize:16,fontWeight:600,color}}>{cur.시작시간}~{cur.종료시간}</div>
+        {cur.길이&&<div style={{fontSize:15,color:"#aaa"}}>{cur.길이}</div>}
       </div>
       {live.length>1&&(
         <div style={{display:"flex",gap:3,flexShrink:0}}>
           {live.map((_,i)=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:i===rollIdx%live.length?color:"#ddd",transition:"background 0.3s"}}></div>)}
         </div>
       )}
-      {live.length>1&&<div style={{position:"absolute",right:14,top:6,fontSize:10,color:"#aaa"}}>{rollIdx%live.length+1}/{live.length}</div>}
+      {live.length>1&&<div style={{position:"absolute",right:14,top:6,fontSize:15,color:"#aaa"}}>{rollIdx%live.length+1}/{live.length}</div>}
     </div>
   );
 }
@@ -526,20 +526,20 @@ export default function App(){
   const filteredRows=filterStudio==="전체"?rows:rows.filter(r=>r.장소===filterStudio);
 
   return(
-    <div style={{display:"flex",flexDirection:"column",width:"100vw",height:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:14,background:"#f5f5f4",color:"#1c1c1a",overflow:"hidden"}}>
+    <div style={{display:"flex",flexDirection:"column",width:"100vw",height:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:21,background:"#f5f5f4",color:"#1c1c1a",overflow:"hidden"}}>
       {bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
       {typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
       {cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
 
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:50,background:"#fff",borderBottom:"0.5px solid #e5e5e3",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,fontWeight:700,fontSize:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontWeight:700,fontSize:21}}>
           <div style={{width:8,height:8,borderRadius:"50%",background:"#1D9E75"}}></div>
           스튜디오 방송편성 관리
-          {saving&&<span style={{fontSize:11,color:"#aaa",fontWeight:400}}>저장 중...</span>}
+          {saving&&<span style={{fontSize:16,color:"#aaa",fontWeight:400}}>저장 중...</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <button style={{...btn,height:30,fontSize:12,color:"#A32D2D",borderColor:"#F09595"}} onClick={resetAllData}>🗑 초기화</button>
-          <button style={{...btn,height:30,fontSize:12,position:"relative"}} onClick={()=>setTab("notifications")}>
+          <button style={{...btn,height:30,fontSize:18,color:"#A32D2D",borderColor:"#F09595"}} onClick={resetAllData}>🗑 초기화</button>
+          <button style={{...btn,height:30,fontSize:18,position:"relative"}} onClick={()=>setTab("notifications")}>
             🔔{unread>0&&<span style={{position:"absolute",top:3,right:3,width:7,height:7,borderRadius:"50%",background:"#E24B4A",border:"1.5px solid #fff"}}></span>}
           </button>
         </div>
@@ -548,19 +548,19 @@ export default function App(){
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
         {/* 사이드바 — 좌우 패딩 제거해서 빈공간 없앰 */}
         <nav style={{width:175,background:"#fff",borderRight:"0.5px solid #e5e5e3",padding:"12px 0",overflowY:"auto",flexShrink:0}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:"0.6px",padding:"0 10px",marginBottom:6}}>메뉴</div>
+          <div style={{fontSize:15,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:"0.6px",padding:"0 10px",marginBottom:6}}>메뉴</div>
           {[{id:"dashboard",icon:"📊",label:"대시보드"},{id:"upload",icon:"📤",label:"편성표 업로드"},{id:"schedule",icon:"📅",label:"스케줄 목록"},{id:"notifications",icon:"🔔",label:`알림${unread>0?` (${unread})`:""}`}].map(item=>(
-            <div key={item.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",fontSize:12,cursor:"pointer",color:tab===item.id?"#1c1c1a":"#666",fontWeight:tab===item.id?600:400,background:tab===item.id?"#f0f0ee":"transparent",marginBottom:1}} onClick={()=>setTab(item.id)}>
+            <div key={item.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",fontSize:18,cursor:"pointer",color:tab===item.id?"#1c1c1a":"#666",fontWeight:tab===item.id?600:400,background:tab===item.id?"#f0f0ee":"transparent",marginBottom:1}} onClick={()=>setTab(item.id)}>
               <span>{item.icon}</span>{item.label}
             </div>
           ))}
           <div style={{margin:"10px 0 6px",borderTop:"0.5px solid #e5e5e3"}}></div>
-          <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:"0.6px",padding:"0 10px",marginBottom:6}}>스튜디오 현황</div>
+          <div style={{fontSize:15,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:"0.6px",padding:"0 10px",marginBottom:6}}>스튜디오 현황</div>
           {(studioStats.length>0?studioStats:STUDIOS.map(s=>({id:s.id,color:s.color,count:null,cf:0}))).map(st=>(
-            <div key={st.id} style={{display:"flex",alignItems:"center",padding:"4px 10px",fontSize:11,color:st.count!=null?"#555":"#ccc",cursor:"pointer"}} onClick={()=>{setTab("schedule");setFilterStudio(st.id);}}>
+            <div key={st.id} style={{display:"flex",alignItems:"center",padding:"4px 10px",fontSize:16,color:st.count!=null?"#555":"#ccc",cursor:"pointer"}} onClick={()=>{setTab("schedule");setFilterStudio(st.id);}}>
               <div style={{width:7,height:7,borderRadius:"50%",background:st.color,marginRight:6,flexShrink:0}}></div>
               <div style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{st.id}</div>
-              {st.count!=null&&<><div style={{fontSize:10,color:"#aaa",marginRight:2}}>{st.count}</div>{st.cf>0&&<span style={{...bd("red"),padding:"0 4px",fontSize:9}}>!</span>}</>}
+              {st.count!=null&&<><div style={{fontSize:15,color:"#aaa",marginRight:2}}>{st.count}</div>{st.cf>0&&<span style={{...bd("red"),padding:"0 4px",fontSize:14}}>!</span>}</>}
             </div>
           ))}
         </nav>
@@ -571,13 +571,13 @@ export default function App(){
             <>
               {/* 상단 헤더 */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                <div style={{fontSize:16,fontWeight:700}}>스튜디오 방송 현황</div>
+                <div style={{fontSize:24,fontWeight:700}}>스튜디오 방송 현황</div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <button style={{...btn,width:28,height:28,padding:0,justifyContent:"center",fontSize:12}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
-                  <span style={{fontSize:12,fontWeight:500,minWidth:150,textAlign:"center"}}>{weekLabel}</span>
-                  <button style={{...btn,width:28,height:28,padding:0,justifyContent:"center",fontSize:12}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
-                  <button style={{...btnB,height:28,fontSize:11}} onClick={()=>downloadSchedule(rows)}>⬇ 다운로드</button>
-                  <button style={{...btnP,height:28,fontSize:11}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
+                  <button style={{...btn,width:28,height:28,padding:0,justifyContent:"center",fontSize:18}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
+                  <span style={{fontSize:18,fontWeight:500,minWidth:150,textAlign:"center"}}>{weekLabel}</span>
+                  <button style={{...btn,width:28,height:28,padding:0,justifyContent:"center",fontSize:18}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
+                  <button style={{...btnB,height:28,fontSize:16}} onClick={()=>downloadSchedule(rows)}>⬇ 다운로드</button>
+                  <button style={{...btnP,height:28,fontSize:16}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                 </div>
               </div>
 
@@ -590,10 +590,10 @@ export default function App(){
                 {/* 좌측: 오늘 스케줄 */}
                 <div style={{width:"32%",flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#1D9E75"}}>
+                    <div style={{fontSize:20,fontWeight:700,color:"#1D9E75"}}>
                       📅 오늘 스케줄
                     </div>
-                    <div style={{fontSize:11,color:"#aaa"}}>
+                    <div style={{fontSize:16,color:"#aaa"}}>
                       {fmtShort(new Date())} ({["일","월","화","수","목","금","토"][new Date().getDay()]}요일)
                     </div>
                   </div>
@@ -605,10 +605,10 @@ export default function App(){
                         .filter(r=>r.날짜===todayStr&&r.장소&&r.시작시간)
                         .sort((a,b)=>toMin(a.시작시간)-toMin(b.시작시간));
                       if(todayRows.length===0) return(
-                        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#ccc",fontSize:12,background:"#fff",borderRadius:12,border:"0.5px solid #e5e5e3",gap:8}}>
-                          <div style={{fontSize:28}}>📭</div>
+                        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#ccc",fontSize:18,background:"#fff",borderRadius:12,border:"0.5px solid #e5e5e3",gap:8}}>
+                          <div style={{fontSize:42}}>📭</div>
                           <div>오늘 예약된 스케줄이 없습니다</div>
-                          <button style={{...btnP,height:28,fontSize:11}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
+                          <button style={{...btnP,height:28,fontSize:16}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                         </div>
                       );
                       // 스튜디오별로 그룹핑
@@ -624,8 +624,8 @@ export default function App(){
                             {/* 스튜디오 헤더 */}
                             <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:`${color}10`,borderBottom:`1px solid ${color}30`}}>
                               <span style={{width:8,height:8,borderRadius:"50%",background:color}}></span>
-                              <span style={{fontSize:12,fontWeight:700,color}}>{studio}</span>
-                              <span style={{marginLeft:"auto",fontSize:10,color,background:`${color}20`,padding:"1px 7px",borderRadius:20}}>{sRows.length}건</span>
+                              <span style={{fontSize:18,fontWeight:700,color}}>{studio}</span>
+                              <span style={{marginLeft:"auto",fontSize:15,color,background:`${color}20`,padding:"1px 7px",borderRadius:20}}>{sRows.length}건</span>
                             </div>
                             {/* 예약 목록 */}
                             <div style={{padding:"6px 8px",display:"flex",flexDirection:"column",gap:4}}>
@@ -640,15 +640,15 @@ export default function App(){
                                     <div style={{width:3,height:32,borderRadius:2,background:isCf?"#E24B4A":color,flexShrink:0}}></div>
                                     <div style={{flex:1,minWidth:0}}>
                                       <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:1}}>
-                                        {b.구분&&!isPrep&&<span style={{fontSize:9,padding:"1px 6px",borderRadius:10,background:`${color}20`,color,fontWeight:600,flexShrink:0}}>{b.구분}</span>}
-                                        {isCf&&<span style={{fontSize:9,color:"#E24B4A",fontWeight:700}}>⚠ 충돌</span>}
+                                        {b.구분&&!isPrep&&<span style={{fontSize:14,padding:"1px 6px",borderRadius:10,background:`${color}20`,color,fontWeight:600,flexShrink:0}}>{b.구분}</span>}
+                                        {isCf&&<span style={{fontSize:14,color:"#E24B4A",fontWeight:700}}>⚠ 충돌</span>}
                                       </div>
-                                      <div style={{fontSize:11,fontWeight:600,color:isCf?"#E24B4A":"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                                      <div style={{fontSize:16,fontWeight:600,color:isCf?"#E24B4A":"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                                         {isPrep?"📋 방송준비":shortContent||content}
                                       </div>
-                                      {b.강사명&&<div style={{fontSize:10,color:"#888"}}>👤 {b.강사명}</div>}
+                                      {b.강사명&&<div style={{fontSize:15,color:"#888"}}>👤 {b.강사명}</div>}
                                     </div>
-                                    <div style={{fontSize:10,color:"#aaa",flexShrink:0,textAlign:"right"}}>
+                                    <div style={{fontSize:15,color:"#aaa",flexShrink:0,textAlign:"right"}}>
                                       <div style={{fontWeight:600,color}}>{b.시작시간}</div>
                                       <div>~{b.종료시간}</div>
                                     </div>
@@ -666,14 +666,14 @@ export default function App(){
                 {/* 우측: 주간 전체 현황 (스크롤) */}
                 <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                    <div style={{fontSize:13,fontWeight:700}}>📊 주간 전체 스튜디오 현황</div>
+                    <div style={{fontSize:20,fontWeight:700}}>📊 주간 전체 스튜디오 현황</div>
                     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                       {STUDIOS.slice(0,6).map(s=>(
-                        <span key={s.id} style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:"#555",padding:"1px 6px",borderRadius:20,background:`${s.color}15`,border:`0.5px solid ${s.color}50`}}>
+                        <span key={s.id} style={{display:"flex",alignItems:"center",gap:3,fontSize:14,color:"#555",padding:"1px 6px",borderRadius:20,background:`${s.color}15`,border:`0.5px solid ${s.color}50`}}>
                           <span style={{width:5,height:5,borderRadius:"50%",background:s.color}}></span>{s.id}
                         </span>
                       ))}
-                      <span style={{fontSize:9,color:"#aaa"}}>+{STUDIOS.length-6}개</span>
+                      <span style={{fontSize:14,color:"#aaa"}}>+{STUDIOS.length-6}개</span>
                     </div>
                   </div>
                   {/* 스크롤 가능한 주간 테이블 */}
@@ -687,17 +687,17 @@ export default function App(){
               {conflicts.length>0&&(
                 <div style={{...panel,border:"0.5px solid #F09595",background:"#FFF8F8",marginTop:10}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                    <div style={{fontSize:13,fontWeight:600,color:"#A32D2D"}}>⚠️ 충돌 {conflicts.length}건</div>
-                    <button style={{...btnR,height:26,fontSize:11}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>🗑 전체 취소</button>
+                    <div style={{fontSize:20,fontWeight:600,color:"#A32D2D"}}>⚠️ 충돌 {conflicts.length}건</div>
+                    <button style={{...btnR,height:26,fontSize:16}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>🗑 전체 취소</button>
                   </div>
                   {conflicts.map((cf,i)=>(
-                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"0.5px solid #F09595",fontSize:11}}>
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"0.5px solid #F09595",fontSize:16}}>
                       <span style={{color:"#791F1F"}}>🏢 {cf.studio} · {cf.date}</span>
                       <span style={{color:"#888"}}>{cf.timeA} ↔ {cf.timeB}</span>
                       <div style={{display:"flex",gap:4}}>
-                        <button style={{...btn,height:24,fontSize:10,padding:"0 8px"}} onClick={()=>setBookingModal(cf.a)}>A 수정</button>
-                        <button style={{...btnR,height:24,fontSize:10,padding:"0 8px"}} onClick={()=>setCancelTarget(cf.a)}>A 취소</button>
-                        <button style={{...btnR,height:24,fontSize:10,padding:"0 8px"}} onClick={()=>setCancelTarget(cf.b)}>B 취소</button>
+                        <button style={{...btn,height:24,fontSize:15,padding:"0 8px"}} onClick={()=>setBookingModal(cf.a)}>A 수정</button>
+                        <button style={{...btnR,height:24,fontSize:15,padding:"0 8px"}} onClick={()=>setCancelTarget(cf.a)}>A 취소</button>
+                        <button style={{...btnR,height:24,fontSize:15,padding:"0 8px"}} onClick={()=>setCancelTarget(cf.b)}>B 취소</button>
                       </div>
                     </div>
                   ))}
@@ -708,27 +708,43 @@ export default function App(){
 
           {tab==="upload"&&(
             <>
-              <div style={{fontSize:16,fontWeight:700,marginBottom:14}}>편성표 업로드</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div style={panel}>
-                  <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>📊 엑셀 일괄 업로드</div>
-                  <div style={{fontSize:11,color:"#888",marginBottom:12}}>VBA로 생성한 방송편성표 엑셀 업로드</div>
-                  <div style={{border:uploadState==="done"?"1.5px solid #1D9E75":"1px dashed #ccc",borderRadius:10,padding:20,textAlign:"center",cursor:"pointer",marginBottom:8}} onClick={()=>fileRef.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile({target:{files:e.dataTransfer.files}});}}>
-                    <div style={{fontSize:24,marginBottom:6}}>{uploadState==="done"?"✅":uploadState==="parsing"?"⏳":uploadState==="error"?"❌":"📂"}</div>
-                    <div style={{fontSize:12,fontWeight:500,marginBottom:2}}>{uploadState==="idle"?"파일 클릭 또는 드래그":uploadState==="parsing"?"처리 중...":uploadState==="done"?fileName:"실패"}</div>
-                    <div style={{fontSize:10,color:"#aaa"}}>B열(장소) 자동 인식 · .xlsx .xls</div>
+              <div style={{fontSize:24,fontWeight:700,marginBottom:14}}>편성표 업로드</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,height:"calc(100vh - 120px)"}}>
+                {/* 엑셀 업로드 */}
+                <div style={{...panel,marginBottom:0,display:"flex",flexDirection:"column"}}>
+                  <div style={{fontSize:20,fontWeight:600,marginBottom:6}}>📊 엑셀 일괄 업로드</div>
+                  <div style={{fontSize:16,color:"#888",marginBottom:16}}>VBA로 생성한 방송편성표 엑셀을 그대로 업로드하세요</div>
+                  {/* 드롭존 - 크게 */}
+                  <div style={{flex:1,border:uploadState==="done"?"2px solid #1D9E75":"2px dashed #ccc",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:uploadState==="done"?"#F0FBF6":"#fafaf9",gap:12}}
+                    onClick={()=>fileRef.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile({target:{files:e.dataTransfer.files}});}}>
+                    <div style={{fontSize:60}}>{uploadState==="done"?"✅":uploadState==="parsing"?"⏳":uploadState==="error"?"❌":"📂"}</div>
+                    <div style={{fontSize:20,fontWeight:600,color:uploadState==="done"?"#1D9E75":"#555",textAlign:"center"}}>
+                      {uploadState==="idle"&&"파일을 클릭하거나 드래그하세요"}
+                      {uploadState==="parsing"&&"파싱 중..."}
+                      {uploadState==="done"&&fileName}
+                      {uploadState==="error"&&"업로드 실패"}
+                    </div>
+                    <div style={{fontSize:16,color:"#aaa"}}>B열(장소) 자동 인식 · .xlsx .xls 지원</div>
                     <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={handleFile}/>
                   </div>
-                  {parseLog.map((l,i)=><div key={i} style={{fontSize:11,lineHeight:1.9,color:l.startsWith("⚠")||l.startsWith("❌")?"#A32D2D":"#0F6E56"}}>{l}</div>)}
+                  {parseLog.length>0&&(
+                    <div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#f8f8f6",display:"flex",flexDirection:"column",gap:4}}>
+                      {parseLog.map((l,i)=><div key={i} style={{fontSize:16,lineHeight:1.9,color:l.startsWith("⚠")||l.startsWith("❌")?"#A32D2D":"#0F6E56"}}>{l}</div>)}
+                    </div>
+                  )}
                 </div>
-                <div style={panel}>
-                  <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>✚ 스튜디오 직접 예약</div>
-                  <div style={{fontSize:11,color:"#888",marginBottom:12}}>날짜·시간을 직접 입력해 예약</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:320,overflowY:"auto"}}>
+                {/* 직접 예약 */}
+                <div style={{...panel,marginBottom:0,display:"flex",flexDirection:"column"}}>
+                  <div style={{fontSize:20,fontWeight:600,marginBottom:6}}>✚ 스튜디오 직접 예약</div>
+                  <div style={{fontSize:16,color:"#888",marginBottom:12}}>스튜디오를 선택해 날짜·시간을 직접 입력해 예약하세요</div>
+                  <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignContent:"start"}}>
                     {STUDIOS.map(s=>(
-                      <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",border:"0.5px solid #e5e5e3",borderRadius:8,fontSize:11}}>
-                        <span style={{display:"flex",alignItems:"center",gap:6}}><span style={{width:7,height:7,borderRadius:"50%",background:s.color}}></span>{s.id}</span>
-                        <button style={{...btn,height:24,fontSize:10,padding:"0 8px"}} onClick={()=>setBookingModal("new")}>예약하기</button>
+                      <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:`1px solid ${s.color}30`,borderRadius:10,background:`${s.color}08`,fontSize:16}}>
+                        <span style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{width:10,height:10,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
+                          <span style={{fontWeight:500,color:"#333"}}>{s.id}</span>
+                        </span>
+                        <button style={{...btn,height:30,fontSize:15,padding:"0 12px",background:s.color,borderColor:s.color,color:"#fff"}} onClick={()=>setBookingModal("new")}>예약</button>
                       </div>
                     ))}
                   </div>
@@ -740,15 +756,15 @@ export default function App(){
           {tab==="schedule"&&(
             <>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{fontSize:16,fontWeight:700}}>스케줄 목록</div>
+                <div style={{fontSize:24,fontWeight:700}}>스케줄 목록</div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <select style={{height:32,padding:"0 8px",borderRadius:8,border:"0.5px solid #ccc",fontSize:11,background:"#fff"}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
+                  <select style={{height:32,padding:"0 8px",borderRadius:8,border:"0.5px solid #ccc",fontSize:16,background:"#fff"}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
                     <option>전체</option>
                     {STUDIOS.map(s=><option key={s.id}>{s.id}</option>)}
                   </select>
-                  <span style={{fontSize:12,color:"#888"}}>{filteredRows.length}건</span>
-                  <button style={{...btnB,height:30,fontSize:12}} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>
-                  <button style={{...btnP,height:30,fontSize:12}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
+                  <span style={{fontSize:18,color:"#888"}}>{filteredRows.length}건</span>
+                  <button style={{...btnB,height:30,fontSize:18}} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>
+                  <button style={{...btnP,height:30,fontSize:18}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                 </div>
               </div>
               <div style={{background:"#fff",border:"0.5px solid #e5e5e3",borderRadius:12,overflow:"auto"}}>
@@ -756,7 +772,7 @@ export default function App(){
                   <thead>
                     <tr style={{background:"#f8f8f6",borderBottom:"0.5px solid #e5e5e3"}}>
                       {["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=>(
-                        <th key={h} style={{padding:"7px 9px",fontSize:10,fontWeight:500,color:"#888",textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"7px 9px",fontSize:15,fontWeight:500,color:"#888",textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -765,7 +781,7 @@ export default function App(){
                       const realIdx=rows.indexOf(row);
                       const isCf=conflictIdxSet.has(realIdx);
                       const noSt=!row.장소;
-                      const td=(children,extra={})=><td style={{padding:"5px 9px",fontSize:11,borderRight:"0.5px solid #f0f0ee",...extra}}>{children}</td>;
+                      const td=(children,extra={})=><td style={{padding:"5px 9px",fontSize:16,borderRight:"0.5px solid #f0f0ee",...extra}}>{children}</td>;
                       return(
                         <tr key={i} style={{borderBottom:"0.5px solid #f0f0ee",background:isCf?"#FFF8F8":noSt?"#FFFBF0":"#fff"}}>
                           {td(row.날짜,{whiteSpace:"nowrap"})}
@@ -779,8 +795,8 @@ export default function App(){
                           {td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
-                          <td style={{padding:"5px 9px",borderRight:"0.5px solid #f0f0ee"}}><button style={{...btn,height:24,padding:"0 8px",fontSize:10,color:"#185FA5",borderColor:"#B5D4F4"}} onClick={()=>setBookingModal(realIdx)}>✏</button></td>
-                          <td style={{padding:"5px 9px"}}><button style={{...btnR,height:24,padding:"0 8px",fontSize:10}} onClick={()=>setCancelTarget(realIdx)}>✕</button></td>
+                          <td style={{padding:"5px 9px",borderRight:"0.5px solid #f0f0ee"}}><button style={{...btn,height:24,padding:"0 8px",fontSize:15,color:"#185FA5",borderColor:"#B5D4F4"}} onClick={()=>setBookingModal(realIdx)}>✏</button></td>
+                          <td style={{padding:"5px 9px"}}><button style={{...btnR,height:24,padding:"0 8px",fontSize:15}} onClick={()=>setCancelTarget(realIdx)}>✕</button></td>
                         </tr>
                       );
                     })}
@@ -793,27 +809,27 @@ export default function App(){
           {tab==="notifications"&&(
             <>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{fontSize:16,fontWeight:700}}>알림</div>
-                <button style={{...btn,height:30,fontSize:12}} onClick={()=>setNotifs(notifs.map(n=>({...n,unread:false})))}>모두 읽음</button>
+                <div style={{fontSize:24,fontWeight:700}}>알림</div>
+                <button style={{...btn,height:30,fontSize:18}} onClick={()=>setNotifs(notifs.map(n=>({...n,unread:false})))}>모두 읽음</button>
               </div>
               {notifs.map(n=>(
                 <div key={n.id} style={{background:n.unread?"#FAFFF9":"#fff",border:"0.5px solid #e5e5e3",borderRadius:12,padding:"11px 13px",display:"flex",gap:10,marginBottom:8,opacity:n.resolved?0.55:1}}>
-                  <div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:n.type==="conflict"?"#FCEBEB":n.type==="cancel"?"#FFF0F0":n.type==="manual"?"#E6F1FB":"#E1F5EE",color:n.type==="conflict"?"#A32D2D":n.type==="cancel"?"#A32D2D":n.type==="manual"?"#185FA5":"#0F6E56"}}>
+                  <div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,background:n.type==="conflict"?"#FCEBEB":n.type==="cancel"?"#FFF0F0":n.type==="manual"?"#E6F1FB":"#E1F5EE",color:n.type==="conflict"?"#A32D2D":n.type==="cancel"?"#A32D2D":n.type==="manual"?"#185FA5":"#0F6E56"}}>
                     {n.type==="conflict"?"⚠️":n.type==="cancel"?"🚫":n.type==="manual"?"✏️":"📤"}
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:12,fontWeight:600,marginBottom:2}}>{n.title}</div>
-                    <div style={{fontSize:11,color:"#888",lineHeight:1.6}}>{n.desc}</div>
+                    <div style={{fontSize:18,fontWeight:600,marginBottom:2}}>{n.title}</div>
+                    <div style={{fontSize:16,color:"#888",lineHeight:1.6}}>{n.desc}</div>
                     {n.type==="conflict"&&!n.resolved&&(
                       <div style={{marginTop:6,display:"flex",gap:5,flexWrap:"wrap"}}>
-                        <button style={{...btn,height:26,fontSize:11}} onClick={()=>setBookingModal(n.rowA)}>A 수정</button>
-                        <button style={{...btnR,height:26,fontSize:11}} onClick={()=>handleReject(n.rowA)}>A 반려</button>
-                        <button style={{...btnR,height:26,fontSize:11}} onClick={()=>handleReject(n.rowB)}>B 반려</button>
+                        <button style={{...btn,height:26,fontSize:16}} onClick={()=>setBookingModal(n.rowA)}>A 수정</button>
+                        <button style={{...btnR,height:26,fontSize:16}} onClick={()=>handleReject(n.rowA)}>A 반려</button>
+                        <button style={{...btnR,height:26,fontSize:16}} onClick={()=>handleReject(n.rowB)}>B 반려</button>
                       </div>
                     )}
                   </div>
-                  <div style={{fontSize:10,color:"#aaa",flexShrink:0}}>
-                    {n.unread&&!n.resolved&&<span style={{...bd("red"),padding:"1px 5px",fontSize:9,display:"block",marginBottom:3}}>new</span>}
+                  <div style={{fontSize:15,color:"#aaa",flexShrink:0}}>
+                    {n.unread&&!n.resolved&&<span style={{...bd("red"),padding:"1px 5px",fontSize:14,display:"block",marginBottom:3}}>new</span>}
                     {n.time}
                   </div>
                 </div>
