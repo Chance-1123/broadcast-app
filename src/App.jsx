@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { supabase } from "./supabase";
 
 const STUDIOS = [
   { id:"스튜디오(지하)", color:"#1D9E75" },
@@ -30,22 +31,6 @@ const ALIASES = {
 const DAYS = ["월","화","수","목","금"];
 const HOURS = Array.from({length:12},(_,i)=>`${String(i+7).padStart(2,"0")}:00`);
 
-// 샘플 데이터
-const SAMPLE_ROWS = [
-  {_id:1,구분:"1학기",장소:"스튜디오(지하)",주제:"코딩 Live Django트랙",내용:"방송준비",강사명:"김준호 강사",날짜:"2026-05-11",요일:"월",시작시간:"08:00",종료시간:"09:00",길이:"01:00",_src:"excel"},
-  {_id:2,구분:"1학기",장소:"스튜디오(지하)",주제:"코딩 Live Django트랙",내용:"Django : DRF 1",강사명:"김준호 강사",날짜:"2026-05-11",요일:"월",시작시간:"09:00",종료시간:"16:00",길이:"07:00",_src:"excel"},
-  {_id:3,구분:"1학기",장소:"17층1호",주제:"코딩 Live React트랙",내용:"방송준비",강사명:"이수민 강사",날짜:"2026-05-11",요일:"월",시작시간:"08:00",종료시간:"09:00",길이:"01:00",_src:"excel"},
-  {_id:4,구분:"1학기",장소:"17층1호",주제:"코딩 Live React트랙",내용:"React : Hooks 기초",강사명:"이수민 강사",날짜:"2026-05-11",요일:"월",시작시간:"09:00",종료시간:"11:00",길이:"02:00",_src:"excel"},
-  {_id:5,구분:"2학기",장소:"온택트룸2",주제:"코딩 Live Python트랙",내용:"방송준비",강사명:"박철수 강사",날짜:"2026-05-12",요일:"화",시작시간:"13:00",종료시간:"14:00",길이:"01:00",_src:"excel"},
-  {_id:6,구분:"2학기",장소:"온택트룸2",주제:"코딩 Live Python트랙",내용:"Python : 알고리즘",강사명:"박철수 강사",날짜:"2026-05-12",요일:"화",시작시간:"14:00",종료시간:"16:00",길이:"02:00",_src:"excel"},
-  {_id:7,구분:"취업",장소:"18층 대강당",주제:"특강",내용:"방송준비",강사명:"최민지 강사",날짜:"2026-05-13",요일:"수",시작시간:"09:00",종료시간:"10:00",길이:"01:00",_src:"manual"},
-  {_id:8,구분:"취업",장소:"18층 대강당",주제:"특강",내용:"취업 특강 : 포트폴리오",강사명:"최민지 강사",날짜:"2026-05-13",요일:"수",시작시간:"10:00",종료시간:"12:00",길이:"02:00",_src:"manual"},
-  {_id:9,구분:"1학기",장소:"대전",주제:"코딩 Live Java트랙",내용:"Java : Spring Boot",강사명:"홍길동 강사",날짜:"2026-05-14",요일:"목",시작시간:"09:00",종료시간:"18:00",길이:"09:00",_src:"excel"},
-  {_id:11,구분:"1학기",장소:"스튜디오(지하)",주제:"코딩 Live Django트랙",내용:"방송준비",강사명:"김준호 강사",날짜:new Date().toISOString().slice(0,10),요일:["일","월","화","수","목","금","토"][new Date().getDay()],시작시간:"08:00",종료시간:"09:00",길이:"01:00",_src:"excel"},
-  {_id:12,구분:"1학기",장소:"스튜디오(지하)",주제:"코딩 Live Django트랙",내용:"Django : DRF 실습",강사명:"김준호 강사",날짜:new Date().toISOString().slice(0,10),요일:["일","월","화","수","목","금","토"][new Date().getDay()],시작시간:"09:00",종료시간:"16:00",길이:"07:00",_src:"excel"},
-  {_id:13,구분:"취업",장소:"18층 대강당",주제:"특강",내용:"포트폴리오 특강",강사명:"최민지 강사",날짜:new Date().toISOString().slice(0,10),요일:["일","월","화","수","목","금","토"][new Date().getDay()],시작시간:"10:00",종료시간:"12:00",길이:"02:00",_src:"manual"},
-  {_id:14,구분:"2학기",장소:"온택트룸4",주제:"코딩 Live Spring트랙",내용:"Spring : JPA",강사명:"박철수 강사",날짜:new Date().toISOString().slice(0,10),요일:["일","월","화","수","목","금","토"][new Date().getDay()],시작시간:"13:00",종료시간:"16:00",길이:"03:00",_src:"excel"},
-];
 
 function excelDateToStr(val){
   if(!val&&val!==0) return "";
@@ -358,11 +343,66 @@ function WeeklyGrid({rows,conflicts,monday,onEdit,onCancel}){
   );
 }
 
+// ── 라이브 롤링 배너 (별도 컴포넌트) ─────────────────────────
+function LiveBanner({rows}){
+  const [rollIdx,setRollIdx]=useState(0);
+  const nowMin=new Date().getHours()*60+new Date().getMinutes();
+  const live=rows.filter(r=>{
+    const s=toMin(r.시작시간),e=toMin(r.종료시간);
+    return s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소;
+  });
+  useEffect(()=>{
+    if(live.length<=1) return;
+    const t=setInterval(()=>setRollIdx(i=>(i+1)%live.length),2800);
+    return()=>clearInterval(t);
+  },[live.length]);
+
+  if(live.length===0) return(
+    <div style={{display:"flex",alignItems:"center",gap:10,background:"#f8f8f6",border:"0.5px solid #e5e5e3",borderRadius:10,padding:"10px 16px",marginBottom:10}}>
+      <div style={{width:8,height:8,borderRadius:"50%",background:"#ccc"}}></div>
+      <span style={{fontSize:12,color:"#aaa"}}>현재 진행 중인 라이브 방송이 없습니다</span>
+      <span style={{marginLeft:"auto",fontSize:11,color:"#ccc"}}>{String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준</span>
+    </div>
+  );
+  const cur=live[rollIdx%live.length];
+  const color=getColor(cur.장소);
+  const content=cur.내용||cur.주제||"";
+  const shortContent=content.includes(":")?content.split(":").pop().trim():content;
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:12,background:`${color}10`,border:`1.5px solid ${color}40`,borderRadius:10,padding:"10px 16px",marginBottom:10,position:"relative"}}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+      <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:"#E24B4A",animation:"pulse 1.2s infinite"}}></div>
+        <span style={{fontSize:11,fontWeight:700,color:"#E24B4A",letterSpacing:"0.5px"}}>LIVE</span>
+      </div>
+      <div style={{width:1,height:28,background:`${color}40`,flexShrink:0}}></div>
+      <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+        <span style={{width:8,height:8,borderRadius:"50%",background:color}}></span>
+        <span style={{fontSize:12,fontWeight:700,color}}>{cur.장소}</span>
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <span style={{fontSize:12,fontWeight:600,color:"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{shortContent||content}</span>
+        {cur.강사명&&<span style={{fontSize:11,color:"#666"}}>👤 {cur.강사명}</span>}
+      </div>
+      <div style={{flexShrink:0,textAlign:"right"}}>
+        <div style={{fontSize:11,fontWeight:600,color}}>{cur.시작시간}~{cur.종료시간}</div>
+        {cur.길이&&<div style={{fontSize:10,color:"#aaa"}}>{cur.길이}</div>}
+      </div>
+      {live.length>1&&(
+        <div style={{display:"flex",gap:3,flexShrink:0}}>
+          {live.map((_,i)=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:i===rollIdx%live.length?color:"#ddd",transition:"background 0.3s"}}></div>)}
+        </div>
+      )}
+      {live.length>1&&<div style={{position:"absolute",right:14,top:6,fontSize:10,color:"#aaa"}}>{rollIdx%live.length+1}/{live.length}</div>}
+    </div>
+  );
+}
+
 export default function App(){
   const [tab,setTab]=useState("dashboard");
-  const [rows,setRows]=useState(SAMPLE_ROWS);
-  const [conflicts,setConflicts]=useState(detectConflicts(SAMPLE_ROWS));
-  const [notifs,setNotifs]=useState([{id:0,type:"info",title:"미리보기 모드",desc:"샘플 데이터로 동작 중입니다. 실제 서비스는 Vercel 배포 버전을 사용하세요.",time:"",unread:false}]);
+  const [rows,setRows]=useState([]);
+  const [conflicts,setConflicts]=useState([]);
+  const [notifs,setNotifs]=useState([{id:0,type:"info",title:"시스템 준비 완료",desc:"편성표 업로드 또는 직접 예약 등록 후 대시보드에서 확인하세요.",time:"",unread:false}]);
   const [uploadState,setUploadState]=useState("idle");
   const [parseLog,setParseLog]=useState([]);
   const [weekOffset,setWeekOffset]=useState(0);
@@ -370,65 +410,111 @@ export default function App(){
   const [cancelTarget,setCancelTarget]=useState(null);
   const [filterStudio,setFilterStudio]=useState("전체");
   const [fileName,setFileName]=useState("");
+  const [saving,setSaving]=useState(false);
   const fileRef=useRef();
 
+  // Supabase 데이터 로드
+  useEffect(()=>{
+    async function load(){
+      const {data,error}=await supabase.from("bookings").select("*").order("created_at",{ascending:true});
+      if(!error&&data){
+        const mapped=data.map(r=>({_id:r.id,구분:r.구분||"",장소:r.장소||"",주제:r.주제||"",내용:r.내용||"",강사명:r.강사명||"",날짜:r.날짜||"",요일:r.요일||"",시작시간:r.시작시간||"",종료시간:r.종료시간||"",길이:r.길이||"",_src:r.src||"manual"}));
+        setRows(mapped);setConflicts(detectConflicts(mapped));
+      }
+    }
+    load();
+  },[]);
+
   function reCalc(newRows){setRows(newRows);setConflicts(detectConflicts(newRows));}
+
+  async function dbInsert(row){
+    setSaving(true);
+    const {data}=await supabase.from("bookings").insert([{구분:row.구분,장소:row.장소,주제:row.주제,내용:row.내용,강사명:row.강사명,날짜:row.날짜,요일:row.요일,시작시간:row.시작시간,종료시간:row.종료시간,길이:row.길이,src:row._src||"manual"}]).select();
+    setSaving(false);return data?.[0];
+  }
+  async function dbUpdate(id,row){
+    setSaving(true);
+    await supabase.from("bookings").update({구분:row.구분,장소:row.장소,주제:row.주제,내용:row.내용,강사명:row.강사명,날짜:row.날짜,요일:row.요일,시작시간:row.시작시간,종료시간:row.종료시간,길이:row.길이}).eq("id",id);
+    setSaving(false);
+  }
+  async function dbDelete(id){await supabase.from("bookings").delete().eq("id",id);}
 
   function handleFile(e){
     const file=e.target.files[0];
     if(!file) return;
     setFileName(file.name);setUploadState("parsing");
     const reader=new FileReader();
-    reader.onload=(evt)=>{
+    reader.onload=async(evt)=>{
       try{
         const wb=XLSX.read(evt.target.result,{type:"binary",cellDates:false});
         const ws=wb.Sheets[wb.SheetNames[0]];
         const raw=XLSX.utils.sheet_to_json(ws,{defval:"",raw:true});
-        const parsed=raw.map((r,i)=>{
+        const parsed=raw.map(r=>{
           const 날짜=excelDateToStr(r["날짜"]||r["F"]||"");
           const 시작=excelTimeToStr(r["시작시간"]||r["H"]||"");
           const 종료=excelTimeToStr(r["종료시간"]||r["I"]||"");
-          return{_id:Date.now()+i,구분:String(r["구분"]||r["A"]||""),장소:normStudio(r["장소"]||r["B"]||""),주제:String(r["주제"]||r["C"]||""),내용:String(r["내용"]||r["D"]||""),강사명:String(r["강사명"]||r["E"]||""),날짜,요일:String(r["요일"]||r["G"]||""),시작시간:시작,종료시간:종료,길이:calcLen(시작,종료),_src:"excel"};
+          return{구분:String(r["구분"]||r["A"]||""),장소:normStudio(r["장소"]||r["B"]||""),주제:String(r["주제"]||r["C"]||""),내용:String(r["내용"]||r["D"]||""),강사명:String(r["강사명"]||r["E"]||""),날짜,요일:String(r["요일"]||r["G"]||""),시작시간:시작,종료시간:종료,길이:calcLen(시작,종료),_src:"excel"};
         }).filter(r=>(r.구분||r.주제||r.내용)&&r.날짜);
-        const merged=[...rows,...parsed];
+        setSaving(true);
+        const {data}=await supabase.from("bookings").insert(parsed.map(r=>({구분:r.구분,장소:r.장소,주제:r.주제,내용:r.내용,강사명:r.강사명,날짜:r.날짜,요일:r.요일,시작시간:r.시작시간,종료시간:r.종료시간,길이:r.길이,src:"excel"}))).select();
+        setSaving(false);
+        const saved=(data||[]).map(r=>({_id:r.id,구분:r.구분,장소:r.장소,주제:r.주제,내용:r.내용,강사명:r.강사명,날짜:r.날짜,요일:r.요일,시작시간:r.시작시간,종료시간:r.종료시간,길이:r.길이,_src:"excel"}));
+        const merged=[...rows,...saved];
         const cfls=detectConflicts(merged);
         reCalc(merged);setUploadState("done");
-        const studios=[...new Set(parsed.map(r=>r.장소).filter(Boolean))];
-        setParseLog([`✅ ${parsed.length}행 파싱 완료`,`🏢 스튜디오: ${studios.join(", ")||"없음"}`,cfls.length>0?`⚠️ 충돌 ${cfls.length}건`:`✓ 충돌 없음`]);
-        setNotifs(prev=>[{id:Date.now(),type:"upload",title:`업로드 완료 — ${file.name}`,desc:`${parsed.length}건 반영됨`,time:"방금",unread:true},...prev]);
+        const studios=[...new Set(saved.map(r=>r.장소).filter(Boolean))];
+        setParseLog([`✅ ${saved.length}행 저장 완료`,`🏢 스튜디오: ${studios.join(", ")||"없음"}`,cfls.length>0?`⚠️ 충돌 ${cfls.length}건`:`✓ 충돌 없음`]);
+        const newN=[];
+        cfls.forEach(cf=>newN.push({id:Date.now()+Math.random(),type:"conflict",title:`⚠ 충돌 — ${cf.studio} · ${cf.date}`,desc:`${cf.timeA} ↔ ${cf.timeB}`,time:"방금",unread:true,rowA:cf.a,rowB:cf.b}));
+        newN.push({id:Date.now(),type:"upload",title:`업로드 완료 — ${file.name}`,desc:`${studios.join(", ")} ${saved.length}건 저장됨`,time:"방금",unread:true});
+        setNotifs(prev=>[...newN,...prev]);
       }catch(err){setUploadState("error");setParseLog(["❌ 파싱 실패: "+err.message]);}
     };
     reader.readAsBinaryString(file);
   }
 
-  function handleSave(form,editIdx){
+  async function handleSave(form,editIdx){
     if(editIdx!=null){
+      const target=rows[editIdx];
+      await dbUpdate(target._id,form);
       reCalc(rows.map((r,i)=>i===editIdx?{...r,...form}:r));
       setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 수정 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);
     } else {
-      reCalc([...rows,{...form,_id:Date.now(),_src:"manual"}]);
+      const saved=await dbInsert({...form,_src:"manual"});
+      reCalc([...rows,{...form,_id:saved?.id,_src:"manual"}]);
       setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 등록 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);
     }
   }
 
-  function handleReject(rowIdx){
+  async function handleReject(rowIdx){
+    const target=rows[rowIdx];
+    if(target._id) await dbDelete(target._id);
     reCalc(rows.filter((_,i)=>i!==rowIdx));
     setNotifs(prev=>prev.map(n=>(n.rowA===rowIdx||n.rowB===rowIdx)?{...n,resolved:true,unread:false}:n));
   }
 
-  function confirmCancel(){
+  async function confirmCancel(){
     if(cancelTarget===null) return;
     const c=rows[cancelTarget];
+    if(c._id) await dbDelete(c._id);
     reCalc(rows.filter((_,i)=>i!==cancelTarget));
     setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);
     setCancelTarget(null);
   }
 
-  function cancelAllConflicts(){
+  async function cancelAllConflicts(){
     const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));
     const removed=rows.filter((_,i)=>cfIdxs.has(i));
+    for(const r of removed){if(r._id) await dbDelete(r._id);}
     reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));
     setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);
+  }
+
+  async function resetAllData(){
+    if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까?")) return;
+    await supabase.from("bookings").delete().neq("id",0);
+    reCalc([]);
+    setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);
   }
 
   const monday=addDays(getThisWeekMonday(),weekOffset*7);
@@ -440,7 +526,7 @@ export default function App(){
   const filteredRows=filterStudio==="전체"?rows:rows.filter(r=>r.장소===filterStudio);
 
   return(
-    <div style={{display:"flex",flexDirection:"column",width:"100%",height:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:14,background:"#f5f5f4",color:"#1c1c1a",overflow:"hidden"}}>
+    <div style={{display:"flex",flexDirection:"column",width:"100vw",height:"100vh",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:14,background:"#f5f5f4",color:"#1c1c1a",overflow:"hidden"}}>
       {bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
       {typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
       {cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
@@ -449,9 +535,10 @@ export default function App(){
         <div style={{display:"flex",alignItems:"center",gap:8,fontWeight:700,fontSize:14}}>
           <div style={{width:8,height:8,borderRadius:"50%",background:"#1D9E75"}}></div>
           스튜디오 방송편성 관리
-          <span style={{fontSize:10,color:"#aaa",fontWeight:400,background:"#f0f0ee",padding:"2px 7px",borderRadius:10}}>미리보기</span>
+          {saving&&<span style={{fontSize:11,color:"#aaa",fontWeight:400}}>저장 중...</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <button style={{...btn,height:30,fontSize:12,color:"#A32D2D",borderColor:"#F09595"}} onClick={resetAllData}>🗑 초기화</button>
           <button style={{...btn,height:30,fontSize:12,position:"relative"}} onClick={()=>setTab("notifications")}>
             🔔{unread>0&&<span style={{position:"absolute",top:3,right:3,width:7,height:7,borderRadius:"50%",background:"#E24B4A",border:"1.5px solid #fff"}}></span>}
           </button>
@@ -494,78 +581,11 @@ export default function App(){
                 </div>
               </div>
 
-              {/* 현재 진행 중인 라이브 롤링 배너 */}
-              {(()=>{
-                const nowMin=new Date().getHours()*60+new Date().getMinutes();
-                const live=rows.filter(r=>{
-                  const s=toMin(r.시작시간),e=toMin(r.종료시간);
-                  return s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소;
-                });
-                const [rollIdx,setRollIdx]=useState(0);
-                useEffect(()=>{
-                  if(live.length<=1) return;
-                  const t=setInterval(()=>setRollIdx(i=>(i+1)%live.length),2800);
-                  return()=>clearInterval(t);
-                },[live.length]);
-
-                if(live.length===0) return(
-                  <div style={{display:"flex",alignItems:"center",gap:10,background:"#f8f8f6",border:"0.5px solid #e5e5e3",borderRadius:10,padding:"10px 16px",marginBottom:10}}>
-                    <div style={{width:8,height:8,borderRadius:"50%",background:"#ccc"}}></div>
-                    <span style={{fontSize:12,color:"#aaa"}}>현재 진행 중인 라이브 방송이 없습니다</span>
-                    <span style={{marginLeft:"auto",fontSize:11,color:"#ccc"}}>
-                      {String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준
-                    </span>
-                  </div>
-                );
-
-                const cur=live[rollIdx%live.length];
-                const color=getColor(cur.장소);
-                const content=cur.내용||cur.주제||"";
-                const shortContent=content.includes(":")?content.split(":").pop().trim():content;
-
-                return(
-                  <div style={{display:"flex",alignItems:"center",gap:12,background:`${color}10`,border:`1.5px solid ${color}40`,borderRadius:10,padding:"10px 16px",marginBottom:10,overflow:"hidden",position:"relative"}}>
-                    {/* LIVE 뱃지 */}
-                    <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-                      <div style={{width:8,height:8,borderRadius:"50%",background:"#E24B4A",animation:"pulse 1.2s infinite"}}></div>
-                      <span style={{fontSize:11,fontWeight:700,color:"#E24B4A",letterSpacing:"0.5px"}}>LIVE</span>
-                    </div>
-                    <div style={{width:"1px",height:28,background:`${color}40`,flexShrink:0}}></div>
-                    {/* 스튜디오 */}
-                    <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-                      <span style={{width:8,height:8,borderRadius:"50%",background:color}}></span>
-                      <span style={{fontSize:12,fontWeight:700,color}}>{cur.장소}</span>
-                    </div>
-                    {/* 내용 */}
-                    <div style={{flex:1,minWidth:0}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"#222",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>
-                        {shortContent||content}
-                      </span>
-                      {cur.강사명&&<span style={{fontSize:11,color:"#666"}}>👤 {cur.강사명}</span>}
-                    </div>
-                    {/* 시간 */}
-                    <div style={{flexShrink:0,textAlign:"right"}}>
-                      <div style={{fontSize:11,fontWeight:600,color}}>{cur.시작시간}~{cur.종료시간}</div>
-                      {cur.길이&&<div style={{fontSize:10,color:"#aaa"}}>{cur.길이}</div>}
-                    </div>
-                    {/* 인디케이터 */}
-                    {live.length>1&&(
-                      <div style={{display:"flex",gap:3,flexShrink:0,marginLeft:4}}>
-                        {live.map((_,i)=>(
-                          <div key={i} style={{width:5,height:5,borderRadius:"50%",background:i===rollIdx%live.length?color:"#ddd",transition:"background 0.3s"}}></div>
-                        ))}
-                      </div>
-                    )}
-                    {live.length>1&&(
-                      <div style={{position:"absolute",right:16,top:6,fontSize:10,color:"#aaa"}}>{rollIdx%live.length+1}/{live.length}</div>
-                    )}
-                    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
-                  </div>
-                );
-              })()}
+              {/* 라이브 롤링 배너 */}
+              <LiveBanner rows={rows}/>
 
               {/* ── 메인 2분할 레이아웃 ── */}
-              <div style={{display:"flex",gap:12,height:"calc(100vh - 280px)",minHeight:400}}>
+              <div style={{display:"flex",gap:12,height:"calc(100vh - 195px)",minHeight:400}}>
 
                 {/* 좌측: 오늘 스케줄 */}
                 <div style={{width:"32%",flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
