@@ -219,13 +219,13 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel}){
       {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel}/>}
       <table style={{width:"100%",borderCollapse:"separate",borderSpacing:0,tableLayout:"fixed"}}>
         <thead>
-          <tr style={{position:"sticky",top:0,zIndex:5}}>
-            <th style={{width:74,padding:"6px 6px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:800,color:UI.sub,textAlign:"center",position:"sticky",left:0,zIndex:8}}>시간</th>
+          <tr>
+            <th style={{width:74,padding:"6px 6px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:800,color:UI.sub,textAlign:"center",position:"sticky",top:0,left:0,zIndex:30,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>시간</th>
             {DAYS.map((day,di)=>{
               const isToday=fmtFull(new Date())===dayDates[di];
               const cnt=displayRows.filter(r=>r.날짜===dayDates[di]&&r.장소).length;
               return(
-                <th key={day} style={{padding:"6px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
+                <th key={day} style={{padding:"6px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center",position:"sticky",top:0,zIndex:25,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>
                   <div style={{fontSize:14,fontWeight:900,color:isToday?"#175CD3":UI.text}}>{day}요일</div>
                   <div style={{fontSize:11,color:isToday?"#175CD3":UI.sub,marginTop:3,fontWeight:700}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
                 </th>
@@ -718,7 +718,7 @@ export default function App(){
                 {isMobile ? (
                   <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget}/>
                 ) : (
-                  <div style={{...card,overflow:"auto",minHeight:560,maxHeight:"none",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
+                  <div style={{...card,overflow:"auto",height:"calc(100vh - 238px)",minHeight:420,maxHeight:"calc(100vh - 238px)",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
                     <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
                   </div>
                 )}
