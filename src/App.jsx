@@ -387,8 +387,7 @@ function LiveBanner({rows, onMore, compact=false}){
   );
 }
 
-function MobileAgendaView({rows, activeStudios, conflicts, monday, onEdit, onCancel}){
-  const [mode,setMode]=useState("today");
+function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit, onCancel}){
   const today=fmtFull(new Date());
   const dayDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
   const conflictIdxs=new Set();
@@ -437,14 +436,6 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, onEdit, onCan
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:-2}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,flex:1}}>
-          <button style={{...btnGhost,height:38,justifyContent:"center",background:mode==="today"?UI.dark:"#fff",color:mode==="today"?"#fff":UI.text,borderColor:mode==="today"?UI.dark:UI.border,fontSize:13}} onClick={()=>setMode("today")}>오늘 보기</button>
-          <button style={{...btnGhost,height:38,justifyContent:"center",background:mode==="week"?UI.dark:"#fff",color:mode==="week"?"#fff":UI.text,borderColor:mode==="week"?UI.dark:UI.border,fontSize:13}} onClick={()=>setMode("week")}>이번주 보기</button>
-        </div>
-        <div style={{height:38,minWidth:48,padding:"0 12px",borderRadius:12,background:"#fff",border:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:950,color:UI.primary,whiteSpace:"nowrap"}}>{liveRows.length}건</div>
-      </div>
-
       {prepRows.length>0&&(
         <details style={{...card,padding:"0",overflow:"hidden",background:"#FAFBFC"}}>
           <summary style={{listStyle:"none",cursor:"pointer",padding:"13px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:13,fontWeight:900,color:UI.sub}}>
@@ -493,6 +484,7 @@ export default function App(){
   const [saving,setSaving]=useState(false);
   const fileRef=useRef();
   const [isMobile,setIsMobile]=useState(()=>typeof window!=="undefined"&&window.innerWidth<=900);
+  const [mobileAgendaMode,setMobileAgendaMode]=useState("today");
 
   useEffect(()=>{
     const onResize=()=>setIsMobile(window.innerWidth<=900);
@@ -614,19 +606,25 @@ export default function App(){
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0,padding:isMobile?"10px 12px 92px 12px":"12px 16px 12px 16px",gap:isMobile?0:16,position:"relative"}}>
         {/* ── 아이콘 전용 사이드바 ── */}
         <nav style={isMobile?{position:"fixed",left:12,right:12,bottom:10,height:66,background:UI.dark,border:"1px solid #1D2939",borderRadius:22,display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"space-around",padding:"6px",gap:6,overflow:"hidden",boxShadow:"0 14px 32px rgba(16,24,40,0.22)",zIndex:1000}:{width:96,background:UI.dark,borderRight:"1px solid #1D2939",borderRadius:20,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",padding:"12px 0",gap:6,overflow:"hidden",boxShadow:"0 10px 24px rgba(16,24,40,0.10)"}}>
-          {[
+          {(isMobile?[
+            {id:"dashboard", icon:"🏠", label:"대시보드"},
+            {id:"schedule",  icon:"📅", label:"스케줄"},
+            {id:"booking", icon:"✚", label:"예약등록"},
+          ]:[
             {id:"dashboard", icon:"🏠", label:"대시보드"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
             {id:"notifications", icon:"🔔", label:"알림"},
-          ].map(item=>(
+          ]).map(item=>{
+            const active=tab===item.id;
+            return (
             <button key={item.id}
-              style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:tab===item.id?UI.primary:"transparent",position:"relative",transition:"all .15s ease"}}
-              onClick={()=>setTab(item.id)}>
+              style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:active?UI.primary:"transparent",position:"relative",transition:"all .15s ease"}}
+              onClick={()=>item.id==="booking"?setBookingModal("new"):setTab(item.id)}>
               <span style={{fontSize:22}}>{item.icon}</span>
-              <span style={{fontSize:12,color:tab===item.id?"#fff":"#CBD5E1",fontWeight:tab===item.id?900:700,whiteSpace:"nowrap"}}>{item.label}</span>
+              <span style={{fontSize:12,color:active?"#fff":"#CBD5E1",fontWeight:active?900:700,whiteSpace:"nowrap"}}>{item.label}</span>
               {item.id==="notifications"&&unread>0&&<span style={{position:"absolute",top:6,right:6,width:6,height:6,borderRadius:"50%",background:"#E24B4A"}}></span>}
             </button>
-          ))}
+          )})}
           {!isMobile&&<div style={{flex:1}}></div>}
         </nav>
 
@@ -640,26 +638,29 @@ export default function App(){
               <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(245,247,250,0.94)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",padding:isMobile?"5px 0 6px 0":"10px 16px 10px 0",boxShadow:"0 10px 20px rgba(16,24,40,0.07)",borderBottom:`1px solid ${UI.border}`}}>
                 <div style={{overflowX:"visible",paddingBottom:isMobile?4:0}}><LiveBanner rows={rows} onMore={()=>setTab("schedule")} compact={isMobile}/></div>
 
-                <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:isMobile?6:10,marginTop:isMobile?7:10,flexDirection:isMobile?"column":"row"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                    <span style={{fontSize:isMobile?17:18,fontWeight:900,color:UI.text,whiteSpace:"nowrap"}}>주간 전체 스튜디오 현황</span>
-                    {isMobile&&(<button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>)}
-                  </div>
-                  {/* 주차 이동 */}
-                  <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:isMobile?"flex-start":"center",marginTop:isMobile?-2:0}}>
-                    <button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
-                    <span style={{fontSize:12,color:UI.sub,minWidth:isMobile?112:118,textAlign:"center",fontWeight:800}}>{weekLabel}</span>
-                    {!isMobile&&(<button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>)}
-                  </div>
-                  {/* 스튜디오 필터 + 모바일 예약 등록 */}
-                  <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0,overflowX:"auto",overflowY:"hidden",paddingBottom:3}}>
-                      <button style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,fontWeight:activeStudios.size===0?900:700,background:activeStudios.size===0?UI.dark:"#fff",color:activeStudios.size===0?"#fff":UI.sub,borderColor:activeStudios.size===0?UI.dark:UI.border}} onClick={()=>setActiveStudios(new Set())}>전체</button>
+                {isMobile ? (
+                  <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
+                    {/* 날짜 필터 라인 */}
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,flex:1,minWidth:0}}>
+                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="today"?UI.dark:"#fff",color:mobileAgendaMode==="today"?"#fff":UI.text,borderColor:mobileAgendaMode==="today"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("today")}>오늘 보기</button>
+                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="week"?UI.dark:"#fff",color:mobileAgendaMode==="week"?"#fff":UI.text,borderColor:mobileAgendaMode==="week"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("week")}>이번주 보기</button>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                        <button style={{...btnGhost,width:34,height:36,padding:0,justifyContent:"center",fontSize:13}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
+                        <span style={{height:36,padding:"0 10px",borderRadius:12,background:"#fff",border:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:UI.sub,fontWeight:900,whiteSpace:"nowrap"}}>{weekLabel}</span>
+                        <button style={{...btnGhost,width:34,height:36,padding:0,justifyContent:"center",fontSize:13}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
+                      </div>
+                    </div>
+
+                    {/* 스튜디오별 버튼 */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",overflowY:"hidden",paddingBottom:4}}>
+                      <button style={{...btnGhost,height:32,fontSize:12,padding:"0 12px",flexShrink:0,fontWeight:activeStudios.size===0?950:800,background:activeStudios.size===0?UI.dark:"#fff",color:activeStudios.size===0?"#fff":UI.sub,borderColor:activeStudios.size===0?UI.dark:UI.border}} onClick={()=>setActiveStudios(new Set())}>전체</button>
                       {STUDIOS.map(s=>{
                         const on=activeStudios.has(s.id);
                         return(
                           <button key={s.id}
-                            style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,display:"flex",alignItems:"center",gap:6,background:on?`${s.color}15`:"#fff",color:on?s.color:UI.sub,borderColor:on?s.color:UI.border,fontWeight:on?900:700}}
+                            style={{...btnGhost,height:32,fontSize:12,padding:"0 11px",flexShrink:0,display:"flex",alignItems:"center",gap:6,background:on?`${s.color}15`:"#fff",color:on?s.color:UI.sub,borderColor:on?s.color:UI.border,fontWeight:on?950:800}}
                             onClick={()=>toggleStudio(s.id)}>
                             <span style={{width:8,height:8,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
                             {s.id}
@@ -667,23 +668,48 @@ export default function App(){
                         );
                       })}
                     </div>
-                    {isMobile&&(<button style={{...btnPrimary,height:34,padding:"0 12px",borderRadius:12,fontSize:13,fontWeight:950,boxShadow:"0 8px 18px rgba(29,158,117,0.24)",whiteSpace:"nowrap",flexShrink:0}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>)}
                   </div>
-                  {/* PC 전용 관리 버튼: 모바일에서는 공간 확보를 위해 숨김 */}
-                  {!isMobile&&(
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexDirection:"row"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <span style={{fontSize:18,fontWeight:900,color:UI.text,whiteSpace:"nowrap"}}>주간 전체 스튜디오 현황</span>
+                    </div>
+                    {/* 주차 이동 */}
+                    <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                      <button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
+                      <span style={{fontSize:12,color:UI.sub,minWidth:118,textAlign:"center",fontWeight:800}}>{weekLabel}</span>
+                      <button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
+                    </div>
+                    {/* 스튜디오 필터 */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0,overflowX:"auto",overflowY:"hidden",paddingBottom:3}}>
+                        <button style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,fontWeight:activeStudios.size===0?900:700,background:activeStudios.size===0?UI.dark:"#fff",color:activeStudios.size===0?"#fff":UI.sub,borderColor:activeStudios.size===0?UI.dark:UI.border}} onClick={()=>setActiveStudios(new Set())}>전체</button>
+                        {STUDIOS.map(s=>{
+                          const on=activeStudios.has(s.id);
+                          return(
+                            <button key={s.id}
+                              style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,display:"flex",alignItems:"center",gap:6,background:on?`${s.color}15`:"#fff",color:on?s.color:UI.sub,borderColor:on?s.color:UI.border,fontWeight:on?900:700}}
+                              onClick={()=>toggleStudio(s.id)}>
+                              <span style={{width:8,height:8,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
+                              {s.id}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
                       <button style={{...btnBlue,flexShrink:0}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>
                       <button style={{...btnGhost,flexShrink:0}} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>
                       <button style={{...btnPrimary,flexShrink:0}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* 주간 현황 영역 */}
               <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:isMobile?"4px 0 16px 0":"10px 16px 16px 0",gap:8,flexShrink:0,minHeight:isMobile?"60vh":undefined}}>
                 {isMobile ? (
-                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
+                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget}/>
                 ) : (
                   <div style={{...card,overflow:"auto",minHeight:560,maxHeight:"none",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
                     <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
