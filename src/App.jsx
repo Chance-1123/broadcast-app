@@ -519,15 +519,11 @@ export default function App(){
           {tab==="dashboard"&&(
             <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto",overflowX:"hidden",minHeight:0,paddingRight:4}}>
 
-              {/* LIVE 배너 */}
-              <div style={{flexShrink:0,padding:"10px 16px 0 0"}}>
+              {/* sticky 상단 컨트롤 영역: LIVE 배너 + 주간 헤더/필터 */}
+              <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(245,247,250,0.94)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",padding:"10px 16px 10px 0",boxShadow:"0 10px 20px rgba(16,24,40,0.07)",borderBottom:`1px solid ${UI.border}`}}>
                 <LiveBanner rows={rows} onMore={()=>setTab("schedule")}/>
-              </div>
 
-              {/* 주간 현황 영역 */}
-              <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:"10px 16px 16px 0",gap:10,flexShrink:0}}>
-                {/* 헤더: 제목 + 주차이동 + 필터 */}
-                <div style={{flexShrink:0,display:"flex",alignItems:"center",gap:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
                   <span style={{fontSize:18,fontWeight:900,color:UI.text,whiteSpace:"nowrap"}}>주간 전체 스튜디오 현황</span>
                   {/* 주차 이동 */}
                   <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -557,7 +553,10 @@ export default function App(){
                     <button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                   </div>
                 </div>
+              </div>
 
+              {/* 주간 현황 영역 */}
+              <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:"10px 16px 16px 0",gap:10,flexShrink:0}}>
                 {/* 주간 테이블 */}
                 <div style={{...card,overflow:"auto",minHeight:560,maxHeight:"none",flexShrink:0}}>
                   <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
@@ -578,6 +577,7 @@ export default function App(){
               </div>
             </div>
           )}
+
           {tab==="schedule"&&(
             <div style={{padding:"20px 24px 24px 0",display:"flex",flexDirection:"column",minHeight:0,flex:1,overflowY:"auto",overflowX:"hidden",gap:14}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
