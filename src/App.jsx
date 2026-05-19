@@ -743,17 +743,17 @@ export default function App(){
             <div style={{padding:isMobile?"14px 0 18px 0":"20px 24px 24px 0",display:"flex",flexDirection:"column",minHeight:0,flex:1,overflowY:"auto",overflowX:"hidden",gap:14}}>
               <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:10,flexDirection:isMobile?"column":"row"}}>
                 <div style={{fontSize:isMobile?20:22,fontWeight:900,color:UI.text}}>스케줄 목록</div>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:isMobile?6:6,flexWrap:isMobile?"nowrap":"wrap",width:isMobile?"100%":"auto",minWidth:0,overflowX:isMobile?"auto":"visible",paddingBottom:isMobile?2:0,WebkitOverflowScrolling:"touch"}}>
                   {/* 스튜디오 필터 */}
-                  <select style={{height:40,padding:"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:14,background:"#fff",fontWeight:700,color:UI.sub}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
+                  <select style={{height:40,padding:isMobile?"0 8px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontWeight:700,color:UI.sub,flex:isMobile?"1 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"34%":undefined}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
                     <option>전체</option>{STUDIOS.map(s=><option key={s.id}>{s.id}</option>)}
                   </select>
                   {/* 학기(구분) 필터 */}
-                  <select style={{height:40,padding:"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:14,background:"#fff",fontWeight:700,color:UI.sub}} value={filterGubun} onChange={e=>setFilterGubun(e.target.value)}>
+                  <select style={{height:40,padding:isMobile?"0 8px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontWeight:700,color:UI.sub,flex:isMobile?"1 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"28%":undefined}} value={filterGubun} onChange={e=>setFilterGubun(e.target.value)}>
                     {gubunList.map(g=><option key={g}>{g}</option>)}
                   </select>
                   {/* 날짜 필터 */}
-                  <input type="date" style={{height:40,padding:"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:14,background:"#fff",fontFamily:"inherit",fontWeight:700,color:UI.sub}} value={filterDate} onChange={e=>setFilterDate(e.target.value)}/>
+                  <input type="date" style={{height:40,padding:isMobile?"0 6px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontFamily:"inherit",fontWeight:700,color:UI.sub,flex:isMobile?"1.25 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"38%":undefined}} value={filterDate} onChange={e=>setFilterDate(e.target.value)}/>
                   {(filterStudio!=="전체"||filterGubun!=="전체"||filterDate)&&(
                     <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
