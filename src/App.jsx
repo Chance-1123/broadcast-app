@@ -312,8 +312,10 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel}){
 }
 function LiveBanner({rows, onMore, compact=false}){
   const [rollIdx,setRollIdx]=useState(0);
-  const nowMin=new Date().getHours()*60+new Date().getMinutes();
-  const live=rows.filter(r=>{const s=toMin(r.시작시간),e=toMin(r.종료시간);return s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소&&r.내용!=="방송준비"&&r.구분!=="방송준비";});
+  const now=new Date();
+  const today=fmtFull(now);
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const live=rows.filter(r=>{const s=toMin(r.시작시간),e=toMin(r.종료시간);return r.날짜===today&&s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소&&r.내용!=="방송준비"&&r.구분!=="방송준비";});
   useEffect(()=>{if(live.length<=1)return;const t=setInterval(()=>setRollIdx(i=>(i+1)%live.length),2800);return()=>clearInterval(t);},[live.length]);
 
   if(live.length===0)return(
