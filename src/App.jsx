@@ -763,8 +763,8 @@ export default function App(){
                 </div>
               </div>
               <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
-                <table style={{width:"100%",minWidth:isMobile?900:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
-                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+                <table style={{width:"100%",minWidth:isMobile?1040:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
+                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredRows.map((row,i)=>{
                       const realIdx=rows.indexOf(row);
@@ -783,6 +783,12 @@ export default function App(){
                           {td(row.강사명,{maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}{td(row.시작시간)}{td(row.종료시간)}{td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:isPrep?<span style={bd("gray")}>방송준비</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
+                          <td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
+                            <button style={{...btn,height:28,padding:"0 10px",fontSize:isMobile?13:14,color:"#185FA5",borderColor:"#B5D4F4",fontWeight:800}} onClick={()=>setBookingModal(realIdx)}>수정</button>
+                          </td>
+                          <td style={{padding:"8px 8px",textAlign:"center"}}>
+                            <button style={{...btnR,height:28,padding:"0 10px",fontSize:isMobile?13:14,fontWeight:800}} onClick={()=>setCancelTarget(realIdx)}>취소</button>
+                          </td>
                         </tr>
                       );
                     })}
