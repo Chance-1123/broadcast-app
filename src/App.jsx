@@ -387,6 +387,99 @@ function LiveBanner({rows, onMore, compact=false}){
   );
 }
 
+function MobileAgendaView({rows, activeStudios, conflicts, monday, onEdit, onCancel}){
+  const [mode,setMode]=useState("today");
+  const today=fmtFull(new Date());
+  const dayDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
+  const conflictIdxs=new Set();
+  conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
+  const scopedRows=rows
+    .map((r,idx)=>({...r,_idx:idx}))
+    .filter(r=>!activeStudios||activeStudios.size===0||activeStudios.has(r.장소))
+    .filter(r=>mode==="week"||r.날짜===today)
+    .sort((a,b)=>{
+      const d=(a.날짜||"").localeCompare(b.날짜||"");
+      if(d!==0)return d;
+      return (toMin(a.시작시간)||0)-(toMin(b.시작시간)||0);
+    });
+  const liveRows=scopedRows.filter(r=>!isPrepBlock(r));
+  const prepRows=scopedRows.filter(r=>isPrepBlock(r));
+  const daysToRender=mode==="today"
+    ? [{day:["일","월","화","수","목","금","토"][new Date().getDay()],date:today,label:fmtShort(new Date())}]
+    : dayDates;
+
+  const EventCard=({row})=>{
+    const color=conflictIdxs.has(row._idx)?UI.danger:getColor(row.장소);
+    const content=row.내용||row.주제||"내용 없음";
+    return(
+      <div style={{...card,borderColor:conflictIdxs.has(row._idx)?"#FDA29B":`${color}33`,padding:"13px 14px",display:"flex",gap:12,alignItems:"stretch",background:conflictIdxs.has(row._idx)?"#FFF8F8":"#fff"}}>
+        <div style={{width:4,borderRadius:999,background:color,flexShrink:0}}></div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
+            <span style={{fontSize:13,fontWeight:900,color}}>{row.시작시간} ~ {row.종료시간}</span>
+            {row.구분&&<GubunBadge 구분={row.구분}/>} 
+            {conflictIdxs.has(row._idx)&&<span style={bd("red")}>충돌</span>}
+          </div>
+          <div style={{fontSize:15,fontWeight:900,color:UI.text,lineHeight:1.45,wordBreak:"keep-all",marginBottom:8}}>{content}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:12,color:UI.sub,fontWeight:700}}>
+            <span>📍 {row.장소||"장소 미정"}</span>
+            {row.강사명&&<span>👤 {row.강사명}</span>}
+            {row.길이&&<span>⏱ {row.길이}</span>}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
+          <button style={{...btnGhost,width:38,height:34,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>onEdit(row._idx)}>✏</button>
+          <button style={{...btnR,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,borderRadius:10}} onClick={()=>onCancel(row._idx)}>✕</button>
+        </div>
+      </div>
+    );
+  };
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <button style={{...btnGhost,height:42,justifyContent:"center",background:mode==="today"?UI.dark:"#fff",color:mode==="today"?"#fff":UI.text,borderColor:mode==="today"?UI.dark:UI.border}} onClick={()=>setMode("today")}>오늘 보기</button>
+        <button style={{...btnGhost,height:42,justifyContent:"center",background:mode==="week"?UI.dark:"#fff",color:mode==="week"?"#fff":UI.text,borderColor:mode==="week"?UI.dark:UI.border}} onClick={()=>setMode("week")}>이번주 보기</button>
+      </div>
+
+      <div style={{...card,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,background:"linear-gradient(180deg,#FFFFFF,#FAFBFC)"}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:900,color:UI.text}}>모바일 일정 카드</div>
+          <div style={{fontSize:12,color:UI.sub,fontWeight:700,marginTop:3}}>라이브는 펼쳐 보고, 방송준비는 요약해서 확인합니다.</div>
+        </div>
+        <div style={{fontSize:12,fontWeight:900,color:UI.primary,whiteSpace:"nowrap"}}>{liveRows.length}건</div>
+      </div>
+
+      {prepRows.length>0&&(
+        <details style={{...card,padding:"0",overflow:"hidden",background:"#FAFBFC"}}>
+          <summary style={{listStyle:"none",cursor:"pointer",padding:"13px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:13,fontWeight:900,color:UI.sub}}>
+            <span>🛠 방송준비 {prepRows.length}건 요약</span>
+            <span style={{fontSize:12,color:UI.mute}}>눌러서 보기</span>
+          </summary>
+          <div style={{borderTop:`1px solid ${UI.softBorder}`,padding:"8px 14px 12px",display:"flex",flexDirection:"column",gap:6}}>
+            {prepRows.map((r,i)=><div key={`${r._idx}-${i}`} style={{fontSize:12,color:UI.sub,fontWeight:700,display:"flex",justifyContent:"space-between",gap:8}}><span>{r.날짜} {r.시작시간}~{r.종료시간}</span><span style={{whiteSpace:"nowrap"}}>{r.장소}</span></div>)}
+          </div>
+        </details>
+      )}
+
+      {daysToRender.map(d=>{
+        const dayRows=liveRows.filter(r=>r.날짜===d.date);
+        return(
+          <section key={d.date} style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",padding:"2px 2px"}}>
+              <h3 style={{margin:0,fontSize:16,fontWeight:950,color:UI.text}}>{d.day}요일 <span style={{fontSize:12,color:UI.sub,fontWeight:800}}>({d.label})</span></h3>
+              <span style={{fontSize:12,color:UI.sub,fontWeight:800}}>{dayRows.length}건</span>
+            </div>
+            {dayRows.length===0 ? (
+              <div style={{...card,padding:"18px 14px",textAlign:"center",fontSize:13,color:UI.mute,fontWeight:800}}>표시할 라이브 일정이 없습니다.</div>
+            ) : dayRows.map(r=><EventCard key={r._idx} row={r}/>) }
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function App(){
   const [tab,setTab]=useState("dashboard");
   const [rows,setRows]=useState([]);
@@ -586,12 +679,13 @@ export default function App(){
 
               {/* 주간 현황 영역 */}
               <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:isMobile?"10px 0 16px 0":"10px 16px 16px 0",gap:10,flexShrink:0}}>
-                {/* 주간 테이블 */}
-                <div style={{...card,overflow:"auto",minHeight:isMobile?520:560,maxHeight:"none",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
-                  <div style={{minWidth:isMobile?900:"auto"}}>
+                {isMobile ? (
+                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
+                ) : (
+                  <div style={{...card,overflow:"auto",minHeight:560,maxHeight:"none",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
                     <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
                   </div>
-                </div>
+                )}
 
                 {/* 충돌 알림 */}
                 {conflicts.length>0&&(
