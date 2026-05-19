@@ -389,13 +389,20 @@ function LiveBanner({rows, onMore, compact=false}){
 
 function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit, onCancel}){
   const today=fmtFull(new Date());
-  const dayDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
+  const selectedWeekDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
+  const selectedWeekSet=new Set(selectedWeekDates.map(d=>d.date));
+  const todayInSelectedWeek=selectedWeekSet.has(today);
+  const selectedDateForTodayMode=todayInSelectedWeek?today:selectedWeekDates[0].date;
+  const selectedDayForTodayMode=todayInSelectedWeek
+    ? ["일","월","화","수","목","금","토"][new Date().getDay()]
+    : selectedWeekDates[0].day;
+  const selectedLabelForTodayMode=todayInSelectedWeek?fmtShort(new Date()):selectedWeekDates[0].label;
   const conflictIdxs=new Set();
   conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
   const scopedRows=rows
     .map((r,idx)=>({...r,_idx:idx}))
     .filter(r=>!activeStudios||activeStudios.size===0||activeStudios.has(r.장소))
-    .filter(r=>mode==="week"||r.날짜===today)
+    .filter(r=>mode==="week"?selectedWeekSet.has(r.날짜):r.날짜===selectedDateForTodayMode)
     .sort((a,b)=>{
       const d=(a.날짜||"").localeCompare(b.날짜||"");
       if(d!==0)return d;
@@ -404,8 +411,8 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
   const liveRows=scopedRows.filter(r=>!isPrepBlock(r));
   const prepRows=scopedRows.filter(r=>isPrepBlock(r));
   const daysToRender=mode==="today"
-    ? [{day:["일","월","화","수","목","금","토"][new Date().getDay()],date:today,label:fmtShort(new Date())}]
-    : dayDates;
+    ? [{day:selectedDayForTodayMode,date:selectedDateForTodayMode,label:selectedLabelForTodayMode}]
+    : selectedWeekDates;
 
   const EventCard=({row})=>{
     const color=conflictIdxs.has(row._idx)?UI.danger:getColor(row.장소);
@@ -753,7 +760,7 @@ export default function App(){
                   <span style={{fontSize:14,color:UI.sub,fontWeight:800}}>{filteredRows.length}건</span>
                   {!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
                   {!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
-                  <button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
+                  {!isMobile&&<button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>}
                 </div>
               </div>
               <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
