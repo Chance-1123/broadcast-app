@@ -668,10 +668,10 @@ export default function App(){
                       );
                     })}
                   </div>
-                  {/* 다운로드 / 예약 등록 */}
+                  {/* 다운로드/업로드는 PC에서만 노출, 모바일은 핵심 조회 UI만 유지 */}
                   <div style={{display:"flex",gap:6,flexShrink:0,overflowX:isMobile?"auto":"visible",paddingBottom:isMobile?2:0}}>
-                    <button style={{...btnBlue,flexShrink:0}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>
-                    <button style={{...btnGhost,flexShrink:0}} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>
+                    {!isMobile&&<button style={{...btnBlue,flexShrink:0}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>}
+                    {!isMobile&&<button style={{...btnGhost,flexShrink:0}} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
                     <button style={{...btnPrimary,flexShrink:0}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                   </div>
                 </div>
@@ -722,8 +722,8 @@ export default function App(){
                     <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
                   <span style={{fontSize:14,color:UI.sub,fontWeight:800}}>{filteredRows.length}건</span>
-                  <button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>
-                  <button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>
+                  {!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
+                  {!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
                   <button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                 </div>
               </div>
