@@ -650,8 +650,8 @@ export default function App(){
                     {/* 날짜 필터 라인 */}
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,flex:1,minWidth:0}}>
-                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="today"?UI.dark:"#fff",color:mobileAgendaMode==="today"?"#fff":UI.text,borderColor:mobileAgendaMode==="today"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("today")}>오늘 보기</button>
-                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="week"?UI.dark:"#fff",color:mobileAgendaMode==="week"?"#fff":UI.text,borderColor:mobileAgendaMode==="week"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("week")}>이번주 보기</button>
+                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="today"?UI.dark:"#fff",color:mobileAgendaMode==="today"?"#fff":UI.text,borderColor:mobileAgendaMode==="today"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("today")}>오늘</button>
+                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="week"?UI.dark:"#fff",color:mobileAgendaMode==="week"?"#fff":UI.text,borderColor:mobileAgendaMode==="week"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("week")}>이번주</button>
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
                         <button style={{...btnGhost,width:34,height:36,padding:0,justifyContent:"center",fontSize:13}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
@@ -757,7 +757,6 @@ export default function App(){
                   {(filterStudio!=="전체"||filterGubun!=="전체"||filterDate)&&(
                     <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
-                  <span style={{fontSize:14,color:UI.sub,fontWeight:800}}>{filteredRows.length}건</span>
                   {!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
                   {!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
                   {!isMobile&&<button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>}
