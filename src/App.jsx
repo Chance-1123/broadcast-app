@@ -29,7 +29,7 @@ const ALIASES = {
 const DAYS=["월","화","수","목","금"];
 const HOURS=Array.from({length:12},(_,i)=>`${String(i+7).padStart(2,"0")}:00`);
 const DASHBOARD_SHELL_HEIGHT = "100dvh";
-const ADMIN_EMAILS = String(import.meta.env?.VITE_ADMIN_EMAILS || "").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = String(import.meta.env?.VITE_ADMIN_EMAILS || import.meta.env?.VITE_ADMIN_EMAIL || "").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
 const RESET_PASSWORD = import.meta.env?.VITE_RESET_PASSWORD || "ssafy-reset";
 
 function excelDateToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(typeof val==="number"&&val>1000){const d=new Date(Math.round((val-25569)*86400*1000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;}return s;}
@@ -552,11 +552,22 @@ export default function App(){
 
   async function resolveRole(user){
     if(!user){setAdminRole("viewer");return "viewer";}
-    const email=(user.email||"").toLowerCase();
-    let role=ADMIN_EMAILS.includes(email)?"admin":"viewer";
+    const email=(user.email||"").trim().toLowerCase();
+
+    // 1순위: Vercel/.env 환경변수에 등록된 관리자 이메일
+    // - VITE_ADMIN_EMAILS=admin1@example.com,admin2@example.com
+    // - VITE_ADMIN_EMAIL=admin@example.com 도 호환
+    if(ADMIN_EMAILS.includes(email)){
+      setAdminRole("admin");
+      return "admin";
+    }
+
+    // 2순위: Supabase profiles.role 이 admin 인 경우
+    // profiles 테이블이 없거나 row가 없어도 앱은 viewer 모드로 동작
+    let role="viewer";
     try{
       const {data}=await supabase.from("profiles").select("role").eq("id",user.id).maybeSingle();
-      if(data?.role)role=data.role;
+      if(String(data?.role||"").toLowerCase()==="admin")role="admin";
     }catch(e){/* profiles 테이블이 없어도 앱은 뷰어 모드로 동작 */}
     setAdminRole(role);
     return role;
@@ -576,7 +587,7 @@ export default function App(){
       await supabase.auth.signOut();
       setAdminUser(null);
       setAdminRole("viewer");
-      return {error:{message:"로그인은 되었지만 관리자 권한이 없습니다. profiles.role 또는 VITE_ADMIN_EMAILS 설정을 확인해주세요."}};
+      return {error:{message:"로그인은 되었지만 관리자 권한이 없습니다. VITE_ADMIN_EMAILS 또는 VITE_ADMIN_EMAIL 환경변수의 이메일과 로그인 이메일이 일치하는지 확인해주세요."}};
     }
     setAdminUser(data.user);
     setShowAdminLogin(false);
