@@ -77,6 +77,8 @@ const btnLg={...btn,height:34,padding:"0 12px",borderRadius:10,fontSize:13,fontW
 const btnPrimary={...btnLg,background:UI.primary,borderColor:UI.primary,color:"#fff"};
 const btnBlue={...btnLg,background:"#EFF6FF",borderColor:"#BBD7FF",color:"#175CD3"};
 const btnGhost={...btnLg,background:"#fff",color:UI.text};
+const disabledAdminStyle={opacity:0.42,cursor:"not-allowed",filter:"grayscale(0.25)"};
+const adminLockedTitle="관리자 로그인 후 사용할 수 있습니다.";
 
 
 function BookingForm({initial,onSave,onClose,title}){
@@ -188,10 +190,10 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
         {row.강사명&&<div><b>강사:</b> {row.강사명}</div>}
         <div><b>날짜:</b> {row.날짜} {row.요일&&`(${row.요일})`}</div><div><b>시간:</b> {row.시작시간} ~ {row.종료시간}</div>
       </div>
-      {canManage&&<div style={{display:"flex",gap:6}}>
-        <button style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onEdit(idx);onClose();}}>✏ 수정</button>
-        <button style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onCancel(idx);onClose();}}>✕ 취소</button>
-      </div>}
+      <div style={{display:"flex",gap:6}}>
+        <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center",...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onEdit(idx);onClose();}}>✏ 수정</button>
+        <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center",...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onCancel(idx);onClose();}}>✕ 취소</button>
+      </div>
     </div>
   );
 }
@@ -437,10 +439,10 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
             {row.길이&&<span>⏱ {row.길이}</span>}
           </div>
         </div>
-        {canManage&&<div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
-          <button style={{...btnGhost,width:38,height:34,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>onEdit(row._idx)}>✏</button>
-          <button style={{...btnR,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,borderRadius:10}} onClick={()=>onCancel(row._idx)}>✕</button>
-        </div>}
+        <div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
+          <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnGhost,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onEdit(row._idx);}}>✏</button>
+          <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnR,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,borderRadius:10,...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onCancel(row._idx);}}>✕</button>
+        </div>
       </div>
     );
   };
@@ -714,10 +716,10 @@ export default function App(){
           ) : (
             <button style={{...btnPrimary,height:34,fontSize:12,padding:"0 12px"}} onClick={()=>setShowAdminLogin(true)}>관리자 로그인</button>
           )}
-          {isAdmin&&<button style={{...btnGhost,height:34,position:"relative",fontSize:16,padding:"0 12px"}} onClick={()=>setTab("notifications")}>
+          <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,height:34,position:"relative",fontSize:16,padding:"0 12px",...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setTab("notifications");}}>
             🔔{unread>0&&<span style={{position:"absolute",top:3,right:3,width:6,height:6,borderRadius:"50%",background:"#E24B4A",border:"1.5px solid #fff"}}></span>}
-          </button>}
-          {isAdmin&&<button style={{...btnGhost,height:34,color:UI.danger,borderColor:"#FDA29B",fontSize:15}} onClick={resetAllData}>🗑</button>}
+          </button>
+          <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,height:34,color:UI.danger,borderColor:"#FDA29B",fontSize:15,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;resetAllData();}}>🗑</button>
         </div>
       </div>
 
@@ -727,17 +729,19 @@ export default function App(){
           {(isMobile?([
             {id:"dashboard", icon:"🏠", label:"대시보드"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
-            ...(isAdmin?[{id:"booking", icon:"✚", label:"예약등록"}]:[]),
+            {id:"booking", icon:"✚", label:"예약등록", adminOnly:true},
           ]):([
             {id:"dashboard", icon:"🏠", label:"대시보드"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
-            ...(isAdmin?[{id:"notifications", icon:"🔔", label:"알림"}]:[]),
+            {id:"notifications", icon:"🔔", label:"알림", adminOnly:true},
           ])).map(item=>{
             const active=tab===item.id;
             return (
             <button key={item.id}
-              style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:active?UI.primary:"transparent",position:"relative",transition:"all .15s ease"}}
-              onClick={()=>item.id==="booking"?(isAdmin?setBookingModal("new"):setShowAdminLogin(true)):setTab(item.id)}>
+              disabled={item.adminOnly&&!isAdmin}
+              title={item.adminOnly&&!isAdmin?adminLockedTitle:undefined}
+              style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:item.adminOnly&&!isAdmin?"not-allowed":"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:active?UI.primary:"transparent",position:"relative",transition:"all .15s ease",opacity:item.adminOnly&&!isAdmin?0.42:1}}
+              onClick={()=>{if(item.adminOnly&&!isAdmin)return;item.id==="booking"?setBookingModal("new"):setTab(item.id);}}>
               <span style={{fontSize:22}}>{item.icon}</span>
               <span style={{fontSize:12,color:active?"#fff":"#CBD5E1",fontWeight:active?900:700,whiteSpace:"nowrap"}}>{item.label}</span>
               {item.id==="notifications"&&unread>0&&<span style={{position:"absolute",top:6,right:6,width:6,height:6,borderRadius:"50%",background:"#E24B4A"}}></span>}
@@ -815,11 +819,11 @@ export default function App(){
                         })}
                       </div>
                     </div>
-                    {isAdmin&&<div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
-                      <button style={{...btnBlue,flexShrink:0}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>
-                      <button style={{...btnGhost,flexShrink:0}} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>
-                      <button style={{...btnPrimary,flexShrink:0}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
-                    </div>}
+                    <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
+                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnBlue,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;downloadSchedule(rows);}}>⬇ 엑셀 다운로드</button>
+                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;fileRef.current?.click();}}>⬆ 엑셀 업로드</button>
+                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnPrimary,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal("new");}}>✚ 예약 등록</button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -843,7 +847,7 @@ export default function App(){
                         <span key={i} style={{fontSize:11,color:"#791F1F",background:"#FCEBEB",padding:"2px 8px",borderRadius:20}}>{cf.studio} {cf.date} {cf.timeA}↔{cf.timeB}</span>
                       ))}
                     </div>
-                    {isAdmin&&<button style={{...btnR,height:24,fontSize:11,flexShrink:0}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>}
+                    <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnR,height:24,fontSize:11,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>
                   </div>
                 )}
               </div>
@@ -868,14 +872,14 @@ export default function App(){
                   {(filterStudio!=="전체"||filterGubun!=="전체"||filterDate)&&(
                     <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
-                  {isAdmin&&!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
-                  {isAdmin&&!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
-                  {isAdmin&&!isMobile&&<button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>}
+                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnBlue,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;downloadSchedule(filteredRows);}}>⬇ 다운로드</button>}
+                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;fileRef.current?.click();}}>⬆ 엑셀 업로드</button>}
+                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnPrimary,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal("new");}}>✚ 예약 등록</button>}
                 </div>
               </div>
               <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
                 <table style={{width:"100%",minWidth:isMobile?1040:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
-                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태",...(isAdmin?["수정","취소"]:[])].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredRows.map((row,i)=>{
                       const realIdx=rows.indexOf(row);
@@ -894,12 +898,12 @@ export default function App(){
                           {td(row.강사명,{maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}{td(row.시작시간)}{td(row.종료시간)}{td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:isPrep?<span style={bd("gray")}>방송준비</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
-                          {isAdmin&&<td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
-                            <button style={{...btn,height:28,padding:"0 10px",fontSize:isMobile?13:14,color:"#185FA5",borderColor:"#B5D4F4",fontWeight:800}} onClick={()=>setBookingModal(realIdx)}>수정</button>
-                          </td>}
-                          {isAdmin&&<td style={{padding:"8px 8px",textAlign:"center"}}>
-                            <button style={{...btnR,height:28,padding:"0 10px",fontSize:isMobile?13:14,fontWeight:800}} onClick={()=>setCancelTarget(realIdx)}>취소</button>
-                          </td>}
+                          <td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
+                            <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btn,height:28,padding:"0 10px",fontSize:isMobile?13:14,color:"#185FA5",borderColor:"#B5D4F4",fontWeight:800,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal(realIdx);}}>수정</button>
+                          </td>
+                          <td style={{padding:"8px 8px",textAlign:"center"}}>
+                            <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnR,height:28,padding:"0 10px",fontSize:isMobile?13:14,fontWeight:800,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setCancelTarget(realIdx);}}>취소</button>
+                          </td>
                         </tr>
                       );
                     })}
