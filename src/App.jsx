@@ -28,9 +28,6 @@ const ALIASES = {
 };
 const DAYS=["월","화","수","목","금"];
 const HOURS=Array.from({length:12},(_,i)=>`${String(i+7).padStart(2,"0")}:00`);
-const DASHBOARD_SHELL_HEIGHT = "100dvh";
-const ADMIN_EMAILS = String(import.meta.env?.VITE_ADMIN_EMAILS || import.meta.env?.VITE_ADMIN_EMAIL || "").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
-const RESET_PASSWORD = import.meta.env?.VITE_RESET_PASSWORD || "ssafy-reset";
 
 function excelDateToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(typeof val==="number"&&val>1000){const d=new Date(Math.round((val-25569)*86400*1000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;}return s;}
 function excelTimeToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{1,2}:\d{2}$/.test(s))return s.padStart(5,"0");if(typeof val==="number"&&val>=0&&val<1){const m=Math.round(val*24*60);return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;}return s;}
@@ -42,14 +39,13 @@ function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtShort(d){return `${d.getMonth()+1}/${d.getDate()}`;}
 function fmtFull(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function getColor(id){return STUDIOS.find(s=>s.id===id)?.color||"#888";}
-function isPrepBlock(row){return row?.내용==="방송준비"||row?.구분==="방송준비"||row?.주제==="방송준비";}
 function detectConflicts(rows){const res=[];for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i],b=rows[j];if(!a.장소||a.장소!==b.장소||a.날짜!==b.날짜)continue;const aS=toMin(a.시작시간),aE=toMin(a.종료시간),bS=toMin(b.시작시간),bE=toMin(b.종료시간);if(aS!==null&&aE!==null&&bS!==null&&bE!==null&&aS<bE&&bS<aE)res.push({a:i,b:j,studio:a.장소,date:a.날짜,timeA:`${a.시작시간}~${a.종료시간}`,timeB:`${b.시작시간}~${b.종료시간}`});}return res;}
 function downloadSchedule(rows){if(rows.length===0){alert("다운로드할 데이터가 없습니다.");return;}const data=rows.map(r=>({구분:r.구분,장소:r.장소,주제:r.주제,내용:r.내용,강사명:r.강사명,날짜:r.날짜,요일:r.요일,시작시간:r.시작시간,종료시간:r.종료시간,길이:r.길이}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"방송편성표");ws['!cols']=[{wch:8},{wch:14},{wch:24},{wch:30},{wch:14},{wch:12},{wch:6},{wch:10},{wch:10},{wch:8}];XLSX.writeFile(wb,`방송편성표_${new Date().toISOString().slice(0,10)}.xlsx`);}
 
 const GUBUN_COLOR={"1학기":{bg:"#E6F1FB",text:"#185FA5"},"2학기":{bg:"#EAF3DE",text:"#3B6D11"},"취업":{bg:"#FAEEDA",text:"#854F0B"},"기획":{bg:"#FBEAF0",text:"#993556"},"기타":{bg:"#F1EFE8",text:"#5F5E5A"}};
-function GubunBadge({구분}){const c=GUBUN_COLOR[구분];if(!c)return null;return <span style={{fontSize:11,padding:"3px 8px",borderRadius:999,background:c.bg,color:c.text,fontWeight:500,marginRight:3}}>{구분}</span>;}
+function GubunBadge({구분}){const c=GUBUN_COLOR[구분];if(!c)return null;return <span style={{fontSize:10,padding:"1px 5px",borderRadius:4,background:c.bg,color:c.text,fontWeight:500,marginRight:3}}>{구분}</span>;}
 
-const bd=(c)=>{const m={red:{bg:"#FCEBEB",fg:"#A32D2D"},green:{bg:"#E1F5EE",fg:"#0F6E56"},blue:{bg:"#E6F1FB",fg:"#185FA5"},amber:{bg:"#FAEEDA",fg:"#854F0B"},gray:{bg:"#F7F7F6",fg:"#666"}};const x=m[c]||m.gray;return{display:"inline-flex",alignItems:"center",padding:"3px 8px",borderRadius:999,fontSize:12,fontWeight:500,background:x.bg,color:x.fg};};
+const bd=(c)=>{const m={red:{bg:"#FCEBEB",fg:"#A32D2D"},green:{bg:"#E1F5EE",fg:"#0F6E56"},blue:{bg:"#E6F1FB",fg:"#185FA5"},amber:{bg:"#FAEEDA",fg:"#854F0B"},gray:{bg:"#F7F7F6",fg:"#666"}};const x=m[c]||m.gray;return{display:"inline-flex",alignItems:"center",padding:"1px 7px",borderRadius:4,fontSize:11,fontWeight:500,background:x.bg,color:x.fg};};
 const btn={display:"inline-flex",alignItems:"center",gap:4,padding:"0 10px",height:26,borderRadius:6,border:"0.5px solid #E5E5E3",fontSize:12,cursor:"pointer",background:"#fff",color:"#555",fontFamily:"inherit"};
 const btnP={...btn,background:"#1D9E75",borderColor:"#1D9E75",color:"#fff"};
 const btnR={...btn,background:"#FCEBEB",borderColor:"#F09595",color:"#A32D2D"};
@@ -57,29 +53,6 @@ const btnB={...btn,background:"#E6F1FB",borderColor:"#B5D4F4",color:"#185FA5"};
 const panel={background:"#fff",border:"0.5px solid #E5E5E3",borderRadius:10,padding:"14px 16px",marginBottom:10};
 const inp={width:"100%",height:32,padding:"0 9px",borderRadius:6,border:"0.5px solid #E5E5E3",fontSize:13,fontFamily:"inherit",background:"#fff",color:"#1c1c1a",boxSizing:"border-box"};
 const lbl={fontSize:12,fontWeight:500,color:"#555",marginBottom:3,display:"block"};
-
-const UI={
-  bg:"#F5F7FA",
-  surface:"#FFFFFF",
-  border:"#E4E7EC",
-  softBorder:"#EEF2F6",
-  text:"#101828",
-  sub:"#667085",
-  mute:"#98A2B3",
-  primary:"#1D9E75",
-  dark:"#101828",
-  danger:"#E24B4A",
-  shadow:"0 1px 2px rgba(16,24,40,0.05)",
-  shadowHover:"0 8px 18px rgba(16,24,40,0.10)",
-};
-const card={background:UI.surface,border:`1px solid ${UI.border}`,borderRadius:18,boxShadow:UI.shadow};
-const btnLg={...btn,height:34,padding:"0 12px",borderRadius:10,fontSize:13,fontWeight:700,border:`1px solid ${UI.border}`,boxShadow:"0 1px 1px rgba(16,24,40,0.03)"};
-const btnPrimary={...btnLg,background:UI.primary,borderColor:UI.primary,color:"#fff"};
-const btnBlue={...btnLg,background:"#EFF6FF",borderColor:"#BBD7FF",color:"#175CD3"};
-const btnGhost={...btnLg,background:"#fff",color:UI.text};
-const disabledAdminStyle={opacity:0.42,cursor:"not-allowed",filter:"grayscale(0.25)"};
-const adminLockedTitle="관리자 로그인 후 사용할 수 있습니다.";
-
 
 function BookingForm({initial,onSave,onClose,title}){
   const [form,setForm]=useState(initial||{장소:"",날짜:"",구분:"1학기",주제:"",내용:"",강사명:"",시작시간:"09:00",종료시간:"18:00",요일:""});
@@ -176,7 +149,7 @@ function CancelModal({row,onClose,onConfirm}){
   );
 }
 
-function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
+function BlockPopup({row,idx,pos,onClose,onEdit,onCancel}){
   const color=getColor(row.장소);
   return(
     <div style={{position:"fixed",top:Math.min(pos.y+10,window.innerHeight-340),left:Math.min(pos.x+10,window.innerWidth-280),zIndex:3000,background:"#fff",borderRadius:12,border:"0.5px solid #e5e5e3",boxShadow:"0 8px 28px rgba(0,0,0,0.18)",width:260,padding:"14px 16px"}} onClick={e=>e.stopPropagation()}>
@@ -191,14 +164,14 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
         <div><b>날짜:</b> {row.날짜} {row.요일&&`(${row.요일})`}</div><div><b>시간:</b> {row.시작시간} ~ {row.종료시간}</div>
       </div>
       <div style={{display:"flex",gap:6}}>
-        <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center",...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onEdit(idx);onClose();}}>✏ 수정</button>
-        <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center",...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onCancel(idx);onClose();}}>✕ 취소</button>
+        <button style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onEdit(idx);onClose();}}>✏ 수정</button>
+        <button style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onCancel(idx);onClose();}}>✕ 취소</button>
       </div>
     </div>
   );
 }
 
-function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canManage=false}){
+function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel}){
   const [popup,setPopup]=useState(null);
   const dayDates=DAYS.map((_,i)=>fmtFull(addDays(monday,i)));
   const conflictIdxs=new Set();
@@ -219,19 +192,19 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
     }).sort((a,b)=>toMin(a.시작시간)-toMin(b.시작시간));
   }
   return(
-    <div style={{position:"relative",width:"100%",minWidth:980,overflow:"visible"}} onClick={()=>setPopup(null)}>
-      {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel} canManage={canManage}/>}
-      <table style={{width:"100%",borderCollapse:"separate",borderSpacing:0,tableLayout:"fixed"}}>
+    <div style={{position:"relative",width:"100%"}} onClick={()=>setPopup(null)}>
+      {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel}/>}
+      <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
         <thead>
-          <tr>
-            <th style={{width:74,padding:"6px 6px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:800,color:UI.sub,textAlign:"center",position:"sticky",top:0,left:0,zIndex:30,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>시간</th>
+          <tr style={{position:"sticky",top:0,zIndex:2}}>
+            <th style={{width:72,padding:"8px 4px",background:"#F7F7F6",borderBottom:"1px solid #E5E5E3",borderRight:"0.5px solid #E5E5E3",fontSize:12,fontWeight:500,color:"#999",textAlign:"center"}}>시간</th>
             {DAYS.map((day,di)=>{
               const isToday=fmtFull(new Date())===dayDates[di];
               const cnt=displayRows.filter(r=>r.날짜===dayDates[di]&&r.장소).length;
               return(
-                <th key={day} style={{padding:"6px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center",position:"sticky",top:0,zIndex:25,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>
-                  <div style={{fontSize:14,fontWeight:900,color:isToday?"#175CD3":UI.text}}>{day}요일</div>
-                  <div style={{fontSize:11,color:isToday?"#175CD3":UI.sub,marginTop:3,fontWeight:700}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
+                <th key={day} style={{padding:"8px 6px",background:isToday?"#EBF5FF":"#F7F7F6",borderBottom:`2px solid ${isToday?"#378ADD":"#E5E5E3"}`,borderRight:"0.5px solid #E5E5E3",textAlign:"center"}}>
+                  <div style={{fontSize:13,fontWeight:600,color:isToday?"#378ADD":"#333"}}>{day}요일</div>
+                  <div style={{fontSize:11,color:isToday?"#378ADD":"#999",marginTop:1}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
                 </th>
               );
             })}
@@ -240,8 +213,8 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
         <tbody>
           {HOURS.map((hour,hi)=>(
             <tr key={hour}>
-              <td style={{padding:"3px 6px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.border}`,textAlign:"center",verticalAlign:"top",overflow:"visible",background:UI.surface,position:"sticky",left:0,zIndex:3}}>
-                <span style={{fontSize:11,fontWeight:800,color:UI.sub}}>{hour}</span>
+              <td style={{padding:"8px 6px",borderBottom:"0.5px solid #F0F0EE",borderRight:"0.5px solid #E5E5E3",textAlign:"center",verticalAlign:"top",background:"#FAFAF9"}}>
+                <span style={{fontSize:12,fontWeight:500,color:"#999"}}>{hour}</span>
               </td>
               {DAYS.map((day,di)=>{
                 const isToday=fmtFull(new Date())===dayDates[di];
@@ -250,55 +223,46 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
                 const startBlocks=allBlocks.filter(b=>toMin(b.시작시간)>=hMin&&toMin(b.시작시간)<hMin+60);
                 const continueBlocks=allBlocks.filter(b=>toMin(b.시작시간)<hMin);
                 return(
-                  <td key={day} style={{padding:"3px 5px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",overflow:"visible",background:isToday?"#FAFCFF":UI.surface,minWidth:0}}>
-                    {allBlocks.length===0&&<div style={{height:4}}></div>}
+                  <td key={day} style={{padding:"4px 5px",borderBottom:"0.5px solid #F0F0EE",borderRight:"0.5px solid #E5E5E3",verticalAlign:"top",background:isToday?"#FAFCFF":"#fff",minWidth:0}}>
+                    {allBlocks.length===0&&<div style={{height:20}}></div>}
                     {continueBlocks.map((b,bi)=>{
                       const isCf=conflictIdxs.has(b.idx);
-                      const isPrep=isPrepBlock(b);
-                      const color=isCf?"#E24B4A":isPrep?"#B8B8B8":getColor(b.장소);
-                      const content=b.내용||b.주제||"";
+                      const isPrep=b.내용==="방송준비"||b.구분==="방송준비";
+                      const color=isCf?"#E24B4A":isPrep?"#bbb":getColor(b.장소);
                       return(
                         <div key={`c${bi}`}
-                          style={{background:isPrep?"#F7F7F5":`${color}10`,borderRadius:isPrep?6:10,padding:isPrep?"2px 6px":"6px 8px",marginBottom:isPrep?2:4,cursor:"pointer",opacity:isPrep?0.72:0.9,border:`1px solid ${isPrep?"#E5E5E3":`${color}28`}`,borderLeft:`3px solid ${color}`}}
+                          style={{background:isPrep?"#F9F9F8":`${color}08`,borderRadius:4,padding:"3px 6px",marginBottom:3,cursor:"pointer",opacity:0.6,borderLeft:`3px solid ${color}30`}}
                           onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}>
-                          {isPrep?(
-                            <div style={{fontSize:9,color:"#9A9A9A",fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>방송준비 · {b.장소}</div>
-                          ):(
-                            <>
-                              <div style={{fontSize:"clamp(10px, 0.78vw, 12px)",fontWeight:900,color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
-                              <div style={{fontSize:"clamp(10px, 0.82vw, 12px)",fontWeight:800,color:UI.text,lineHeight:1.22,whiteSpace:"normal",wordBreak:"keep-all"}}>{content||"-"}</div>
-                              <div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,marginTop:1,fontWeight:700}}>{b.시작시간} ~ {b.종료시간}</div>
-                              {b.강사명&&<div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:1}}>👤 {b.강사명}</div>}
-                            </>
-                          )}
+                          <div style={{fontSize:10,color,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
                         </div>
                       );
                     })}
                     {startBlocks.map((b,bi)=>{
                       const isCf=conflictIdxs.has(b.idx);
-                      const isPrep=isPrepBlock(b);
-                      const color=isCf?"#E24B4A":isPrep?"#B8B8B8":getColor(b.장소);
-                      const bg=isCf?"#FFF5F5":isPrep?"#F7F7F5":`${color}10`;
+                      const isPrep=b.내용==="방송준비"||b.구분==="방송준비";
+                      const color=isCf?"#E24B4A":isPrep?"#aaa":getColor(b.장소);
+                      const bg=isCf?"#FFF5F5":isPrep?"#F7F7F5":`${color}0D`;
                       const content=b.내용||b.주제||"";
+                      const shortContent=content.includes(":")?content.split(":").pop().trim():content;
                       return(
                         <div key={bi}
-                          style={{background:bg,borderRadius:9,padding:"4px 7px",marginBottom:3,cursor:"pointer",transition:"all 0.15s ease",border:`1px solid ${color}25`,boxShadow:"0 1px 2px rgba(16,24,40,0.04)"}}
+                          style={{background:bg,borderRadius:6,padding:"6px 8px",marginBottom:4,cursor:"pointer",transition:"filter 0.1s",border:`0.5px solid ${color}25`}}
                           onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
-                          onMouseEnter={e=>{e.currentTarget.style.filter="brightness(0.98)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=UI.shadowHover;}}
-                          onMouseLeave={e=>{e.currentTarget.style.filter="none";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 1px 2px rgba(16,24,40,0.04)";}}>
+                          onMouseEnter={e=>e.currentTarget.style.filter="brightness(0.96)"}
+                          onMouseLeave={e=>e.currentTarget.style.filter="none"}>
                           {isCf&&<div style={{fontSize:9,color:"#E24B4A",fontWeight:600,marginBottom:2}}>⚠ 충돌</div>}
+                          <div style={{fontSize:12,fontWeight:700,color,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
                           {isPrep?(
-                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
-                              <span style={{fontSize:9,color:"#9A9A9A",fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>방송준비</span>
-                              <span style={{fontSize:9,color:"#B8B8B8",fontWeight:700,whiteSpace:"nowrap"}}>{b.시작시간}~{b.종료시간}</span>
-                            </div>
+                            <><div style={{fontSize:11,color:"#bbb"}}>방송준비</div><div style={{fontSize:10,color:"#ccc"}}>{b.시작시간} ~ {b.종료시간}</div></>
                           ):(
                             <>
-                              <div style={{fontSize:"clamp(10px, 0.78vw, 12px)",fontWeight:900,color,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
-                              <div style={{fontSize:"clamp(10px, 0.86vw, 13px)",fontWeight:900,color:UI.text,lineHeight:1.28,whiteSpace:"normal",wordBreak:"keep-all"}}>{content||"-"}</div>
-                              {b.주제&&b.내용&&b.주제!==b.내용&&<div style={{fontSize:"clamp(9px, 0.74vw, 11px)",color:UI.sub,lineHeight:1.25,marginTop:2,whiteSpace:"normal",wordBreak:"keep-all"}}>{b.주제}</div>}
-                              <div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,marginTop:3,fontWeight:800}}>{b.시작시간} ~ {b.종료시간}</div>
-                              {b.강사명&&<div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}>👤 {b.강사명}</div>}
+                              <div style={{fontSize:12,fontWeight:500,color:"#1c1c1a",lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{shortContent||content}</div>
+                              <div style={{fontSize:11,color:"#777",marginTop:2}}>{b.시작시간} ~ {b.종료시간}</div>
+                              {b.강사명&&<div style={{fontSize:11,color:"#888",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>👤 {b.강사명}</div>}
+                              <div style={{display:"flex",gap:2,marginTop:4}}>
+                                <button style={{flex:1,background:"rgba(255,255,255,0.85)",border:"0.5px solid #E5E5E3",borderRadius:3,fontSize:9,cursor:"pointer",padding:"2px 0",color:"#555"}} onClick={e=>{e.stopPropagation();onEdit(b.idx);}}>✏ 수정</button>
+                                <button style={{flex:1,background:"rgba(255,255,255,0.85)",border:"0.5px solid #F09595",borderRadius:3,fontSize:9,cursor:"pointer",padding:"2px 0",color:"#A32D2D"}} onClick={e=>{e.stopPropagation();onCancel(b.idx);}}>✕ 취소</button>
+                              </div>
                             </>
                           )}
                         </div>
@@ -314,21 +278,17 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
     </div>
   );
 }
-function LiveBanner({rows, onMore, compact=false}){
+function LiveBanner({rows, onMore}){
   const [rollIdx,setRollIdx]=useState(0);
-  const now=new Date();
-  const today=fmtFull(now);
-  const nowMin=now.getHours()*60+now.getMinutes();
-  const live=rows.filter(r=>{const s=toMin(r.시작시간),e=toMin(r.종료시간);return r.날짜===today&&s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소&&r.내용!=="방송준비"&&r.구분!=="방송준비";});
+  const nowMin=new Date().getHours()*60+new Date().getMinutes();
+  const live=rows.filter(r=>{const s=toMin(r.시작시간),e=toMin(r.종료시간);return s!==null&&e!==null&&s<=nowMin&&e>nowMin&&r.장소&&r.내용!=="방송준비"&&r.구분!=="방송준비";});
   useEffect(()=>{if(live.length<=1)return;const t=setInterval(()=>setRollIdx(i=>(i+1)%live.length),2800);return()=>clearInterval(t);},[live.length]);
 
   if(live.length===0)return(
-    <div style={{...card,minHeight:compact?72:52,display:"flex",alignItems:compact?"flex-start":"center",gap:compact?6:8,padding:compact?"12px 14px":"0 16px",background:"linear-gradient(180deg,#FFFFFF,#FAFBFC)",flexDirection:compact?"column":"row"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,width:"100%"}}>
-        <div style={{width:10,height:10,borderRadius:"50%",background:UI.mute,flexShrink:0}}></div>
-        <span style={{fontSize:compact?13:13,fontWeight:800,color:UI.sub}}>현재 진행 중인 라이브 방송이 없습니다</span>
-      </div>
-      <span style={{marginLeft:compact?18:"auto",fontSize:12,color:UI.mute}}>{String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준</span>
+    <div style={{display:"flex",alignItems:"center",gap:10,background:"#fff",border:"0.5px solid #E5E5E3",borderRadius:10,padding:"10px 16px"}}>
+      <div style={{width:7,height:7,borderRadius:"50%",background:"#ccc"}}></div>
+      <span style={{fontSize:12,color:"#aaa"}}>현재 진행 중인 라이브 방송이 없습니다</span>
+      <span style={{marginLeft:"auto",fontSize:11,color:"#ccc"}}>{String(new Date().getHours()).padStart(2,"0")}:{String(new Date().getMinutes()).padStart(2,"0")} 기준</span>
     </div>
   );
 
@@ -337,177 +297,39 @@ function LiveBanner({rows, onMore, compact=false}){
   const content=cur.내용||cur.주제||"";
   const shortContent=content.includes(":")?content.split(":").pop().trim():content;
 
-  if(compact)return(
-    <div style={{...card,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10,background:"linear-gradient(180deg,#FFFFFF,#FAFBFC)",overflow:"hidden"}}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
-      <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-        <div style={{width:9,height:9,borderRadius:"50%",background:UI.danger,animation:"pulse 1.2s infinite",flexShrink:0}}></div>
-        <span style={{fontSize:13,fontWeight:900,color:UI.danger,letterSpacing:".5px",flexShrink:0}}>LIVE</span>
-        <span style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0,marginLeft:4}}></span>
-        <span style={{fontSize:13,fontWeight:900,color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cur.장소}</span>
-        {cur.구분&&<GubunBadge 구분={cur.구분}/>}
-      </div>
-      <div style={{fontSize:16,fontWeight:900,color:UI.text,lineHeight:1.35,wordBreak:"keep-all"}}>{shortContent||content}</div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-        <span style={{fontSize:13,fontWeight:800,color:color}}>{cur.시작시간} ~ {cur.종료시간}</span>
-        {cur.강사명&&<span style={{fontSize:12,color:UI.sub,fontWeight:700}}>👤 {cur.강사명}</span>}
-        <button style={{...btnGhost,height:32,padding:"0 12px",fontSize:12,marginLeft:"auto"}} onClick={onMore}>더보기 ›</button>
-      </div>
-    </div>
-  );
-
   return(
-    <div style={{...card,height:56,display:"flex",alignItems:"center",gap:0,overflow:"hidden",background:"linear-gradient(180deg,#FFFFFF,#FAFBFC)"}}>
+    <div style={{display:"flex",alignItems:"center",gap:0,background:"#fff",border:"0.5px solid #E5E5E3",borderRadius:10,overflow:"hidden"}}>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
       {/* LIVE 뱃지 */}
-      <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 16px",height:"100%",borderRight:`1px solid ${UI.softBorder}`,flexShrink:0}}>
-        <div style={{width:9,height:9,borderRadius:"50%",background:UI.danger,animation:"pulse 1.2s infinite"}}></div>
-        <span style={{fontSize:14,fontWeight:900,color:UI.danger,letterSpacing:".5px"}}>LIVE</span>
-        <span style={{fontSize:12,color:UI.sub,marginLeft:2}}>현재 진행 중인 라이브</span>
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"12px 16px",borderRight:"0.5px solid #E5E5E3",flexShrink:0}}>
+        <div style={{width:7,height:7,borderRadius:"50%",background:"#E24B4A",animation:"pulse 1.2s infinite"}}></div>
+        <span style={{fontSize:11,fontWeight:700,color:"#E24B4A",letterSpacing:".5px"}}>LIVE</span>
+        <span style={{fontSize:11,color:"#888",marginLeft:4}}>현재 진행 중인 라이브</span>
       </div>
       {/* 스튜디오 */}
-      <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 16px",height:"100%",borderRight:`1px solid ${UI.softBorder}`,flexShrink:0}}>
-        <div style={{width:10,height:10,borderRadius:"50%",background:color}}></div>
-        <span style={{fontSize:13,fontWeight:800,color}}>{cur.장소}</span>
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 16px",borderRight:"0.5px solid #E5E5E3",flexShrink:0}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:color}}></div>
+        <span style={{fontSize:13,fontWeight:600,color}}>{cur.장소}</span>
         {cur.구분&&<GubunBadge 구분={cur.구분}/>}
       </div>
       {/* 내용 */}
       <div style={{flex:1,padding:"0 16px",minWidth:0}}>
-        <span style={{fontSize:14,fontWeight:800,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{shortContent||content}</span>
+        <span style={{fontSize:13,fontWeight:600,color:"#1c1c1a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{shortContent||content}</span>
       </div>
       {/* 강사 */}
       {cur.강사명&&(
-        <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 16px",height:"100%",borderLeft:`1px solid ${UI.softBorder}`,flexShrink:0}}>
-          <span style={{fontSize:12,color:UI.sub,fontWeight:700}}>👤 {cur.강사명}</span>
+        <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 16px",borderLeft:"0.5px solid #E5E5E3",flexShrink:0}}>
+          <span style={{fontSize:11,color:"#555"}}>👤 {cur.강사명}</span>
         </div>
       )}
       {/* 시간 */}
-      <div style={{padding:"0 16px",height:"100%",display:"flex",alignItems:"center",borderLeft:`1px solid ${UI.softBorder}`,flexShrink:0}}>
-        <span style={{fontSize:13,fontWeight:900,color:color}}>{cur.시작시간} ~ {cur.종료시간}</span>
+      <div style={{padding:"0 16px",borderLeft:"0.5px solid #E5E5E3",flexShrink:0}}>
+        <span style={{fontSize:12,fontWeight:600,color:color}}>{cur.시작시간} ~ {cur.종료시간}</span>
       </div>
       {/* 더보기 */}
-      <button style={{...btnGhost,height:"100%",padding:"0 16px",borderRadius:0,borderLeft:`1px solid ${UI.softBorder}`,borderTop:"none",borderRight:"none",borderBottom:"none",fontSize:12,color:UI.text,flexShrink:0,gap:4}} onClick={onMore}>
+      <button style={{...btn,height:46,padding:"0 16px",borderRadius:0,borderLeft:"0.5px solid #E5E5E3",borderTop:"none",borderRight:"none",borderBottom:"none",fontSize:12,color:"#555",flexShrink:0,gap:4}} onClick={onMore}>
         라이브 현황 더보기 <span>›</span>
       </button>
-    </div>
-  );
-}
-
-function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit, onCancel, canManage=false}){
-  const today=fmtFull(new Date());
-  const selectedWeekDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
-  const selectedWeekSet=new Set(selectedWeekDates.map(d=>d.date));
-  const todayInSelectedWeek=selectedWeekSet.has(today);
-  const selectedDateForTodayMode=todayInSelectedWeek?today:selectedWeekDates[0].date;
-  const selectedDayForTodayMode=todayInSelectedWeek
-    ? ["일","월","화","수","목","금","토"][new Date().getDay()]
-    : selectedWeekDates[0].day;
-  const selectedLabelForTodayMode=todayInSelectedWeek?fmtShort(new Date()):selectedWeekDates[0].label;
-  const conflictIdxs=new Set();
-  conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
-  const scopedRows=rows
-    .map((r,idx)=>({...r,_idx:idx}))
-    .filter(r=>!activeStudios||activeStudios.size===0||activeStudios.has(r.장소))
-    .filter(r=>mode==="week"?selectedWeekSet.has(r.날짜):r.날짜===selectedDateForTodayMode)
-    .sort((a,b)=>{
-      const d=(a.날짜||"").localeCompare(b.날짜||"");
-      if(d!==0)return d;
-      return (toMin(a.시작시간)||0)-(toMin(b.시작시간)||0);
-    });
-  const liveRows=scopedRows.filter(r=>!isPrepBlock(r));
-  const prepRows=scopedRows.filter(r=>isPrepBlock(r));
-  const daysToRender=mode==="today"
-    ? [{day:selectedDayForTodayMode,date:selectedDateForTodayMode,label:selectedLabelForTodayMode}]
-    : selectedWeekDates;
-
-  const EventCard=({row})=>{
-    const color=conflictIdxs.has(row._idx)?UI.danger:getColor(row.장소);
-    const content=row.내용||row.주제||"내용 없음";
-    return(
-      <div style={{...card,borderColor:conflictIdxs.has(row._idx)?"#FDA29B":`${color}33`,padding:"14px 14px",display:"flex",gap:12,alignItems:"stretch",background:conflictIdxs.has(row._idx)?"#FFF8F8":"#fff",minHeight:118}}>
-        <div style={{width:4,borderRadius:999,background:color,flexShrink:0}}></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
-            <span style={{fontSize:13,fontWeight:900,color}}>{row.시작시간} ~ {row.종료시간}</span>
-            {row.구분&&<GubunBadge 구분={row.구분}/>} 
-            {conflictIdxs.has(row._idx)&&<span style={bd("red")}>충돌</span>}
-          </div>
-          <div style={{fontSize:15,fontWeight:900,color:UI.text,lineHeight:1.45,wordBreak:"keep-all",marginBottom:8}}>{content}</div>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:12,color:UI.sub,fontWeight:700}}>
-            <span>📍 {row.장소||"장소 미정"}</span>
-            {row.강사명&&<span>👤 {row.강사명}</span>}
-            {row.길이&&<span>⏱ {row.길이}</span>}
-          </div>
-        </div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
-          <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnGhost,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onEdit(row._idx);}}>✏</button>
-          <button disabled={!canManage} title={!canManage?adminLockedTitle:undefined} style={{...btnR,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,borderRadius:10,...(!canManage?disabledAdminStyle:{})}} onClick={()=>{if(!canManage)return;onCancel(row._idx);}}>✕</button>
-        </div>
-      </div>
-    );
-  };
-
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-      {prepRows.length>0&&(
-        <details style={{...card,padding:"0",overflow:"hidden",background:"#FAFBFC"}}>
-          <summary style={{listStyle:"none",cursor:"pointer",padding:"13px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:13,fontWeight:900,color:UI.sub}}>
-            <span>🛠 방송준비 {prepRows.length}건 요약</span>
-            <span style={{fontSize:12,color:UI.mute}}>눌러서 보기</span>
-          </summary>
-          <div style={{borderTop:`1px solid ${UI.softBorder}`,padding:"8px 14px 12px",display:"flex",flexDirection:"column",gap:6}}>
-            {prepRows.map((r,i)=><div key={`${r._idx}-${i}`} style={{fontSize:12,color:UI.sub,fontWeight:700,display:"flex",justifyContent:"space-between",gap:8}}><span>{r.날짜} {r.시작시간}~{r.종료시간}</span><span style={{whiteSpace:"nowrap"}}>{r.장소}</span></div>)}
-          </div>
-        </details>
-      )}
-
-      {daysToRender.map(d=>{
-        const dayRows=liveRows.filter(r=>r.날짜===d.date);
-        return(
-          <section key={d.date} style={{display:"flex",flexDirection:"column",gap:8}}>
-            <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",padding:"2px 2px"}}>
-              <h3 style={{margin:0,fontSize:16,fontWeight:950,color:UI.text}}>{d.day}요일 <span style={{fontSize:12,color:UI.sub,fontWeight:800}}>({d.label})</span></h3>
-              <span style={{fontSize:12,color:UI.sub,fontWeight:800}}>{dayRows.length}건</span>
-            </div>
-            {dayRows.length===0 ? (
-              <div style={{...card,padding:"18px 14px",textAlign:"center",fontSize:13,color:UI.mute,fontWeight:800}}>표시할 라이브 일정이 없습니다.</div>
-            ) : dayRows.map(r=><EventCard key={r._idx} row={r}/>) }
-          </section>
-        );
-      })}
-    </div>
-  );
-}
-
-function AdminLoginModal({onClose,onLogin}){
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-  const [busy,setBusy]=useState(false);
-  const [err,setErr]=useState("");
-  async function submit(){
-    if(!email.trim()||!password){setErr("이메일과 비밀번호를 입력해주세요.");return;}
-    setBusy(true);setErr("");
-    const {error}=await onLogin(email.trim(),password);
-    setBusy(false);
-    if(error)setErr(error.message||"관리자 로그인에 실패했습니다.");
-  }
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(16,24,40,0.48)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:4000,padding:20}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{width:380,maxWidth:"100%",background:"#fff",borderRadius:20,border:`1px solid ${UI.border}`,boxShadow:"0 24px 60px rgba(16,24,40,0.25)",overflow:"hidden"}}>
-        <div style={{padding:"20px 22px",borderBottom:`1px solid ${UI.border}`}}>
-          <div style={{fontSize:18,fontWeight:950,color:UI.text}}>관리자 로그인</div>
-          <div style={{fontSize:13,color:UI.sub,marginTop:5,lineHeight:1.5}}>관리자만 업로드, 다운로드, 예약 등록, 수정, 취소, 초기화를 사용할 수 있습니다.</div>
-        </div>
-        <div style={{padding:22,display:"flex",flexDirection:"column",gap:12}}>
-          <div><span style={lbl}>이메일</span><input style={{...inp,height:42,fontSize:14}} type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com"/></div>
-          <div><span style={lbl}>비밀번호</span><input style={{...inp,height:42,fontSize:14}} type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="비밀번호" onKeyDown={e=>{if(e.key==="Enter")submit();}}/></div>
-          {err&&<div style={{fontSize:13,color:UI.danger,background:"#FFF1F0",border:"1px solid #FDA29B",borderRadius:10,padding:"9px 11px",lineHeight:1.5}}>{err}</div>}
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
-            <button style={{...btnGhost,height:38}} onClick={onClose} disabled={busy}>취소</button>
-            <button style={{...btnPrimary,height:38}} onClick={submit} disabled={busy}>{busy?"확인 중...":"로그인"}</button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -528,19 +350,7 @@ export default function App(){
   const [activeStudios,setActiveStudios]=useState(new Set()); // 빈 Set = 전체 표시
   const [fileName,setFileName]=useState("");
   const [saving,setSaving]=useState(false);
-  const [adminUser,setAdminUser]=useState(null);
-  const [adminRole,setAdminRole]=useState("viewer");
-  const [showAdminLogin,setShowAdminLogin]=useState(false);
   const fileRef=useRef();
-  const [isMobile,setIsMobile]=useState(()=>typeof window!=="undefined"&&window.innerWidth<=900);
-  const [mobileAgendaMode,setMobileAgendaMode]=useState("today");
-
-  useEffect(()=>{
-    const onResize=()=>setIsMobile(window.innerWidth<=900);
-    onResize();
-    window.addEventListener("resize",onResize);
-    return()=>window.removeEventListener("resize",onResize);
-  },[]);
 
   function toggleStudio(id){
     setActiveStudios(prev=>{
@@ -549,71 +359,6 @@ export default function App(){
       return next;
     });
   }
-
-  async function resolveRole(user){
-    if(!user){setAdminRole("viewer");return "viewer";}
-    const email=(user.email||"").trim().toLowerCase();
-
-    // 1순위: Vercel/.env 환경변수에 등록된 관리자 이메일
-    // - VITE_ADMIN_EMAILS=admin1@example.com,admin2@example.com
-    // - VITE_ADMIN_EMAIL=admin@example.com 도 호환
-    if(ADMIN_EMAILS.includes(email)){
-      setAdminRole("admin");
-      return "admin";
-    }
-
-    // 2순위: Supabase profiles.role 이 admin 인 경우
-    // profiles 테이블이 없거나 row가 없어도 앱은 viewer 모드로 동작
-    let role="viewer";
-    try{
-      const {data}=await supabase.from("profiles").select("role").eq("id",user.id).maybeSingle();
-      if(String(data?.role||"").toLowerCase()==="admin")role="admin";
-    }catch(e){/* profiles 테이블이 없어도 앱은 뷰어 모드로 동작 */}
-    setAdminRole(role);
-    return role;
-  }
-  const isAdmin=!!adminUser&&adminRole==="admin";
-  function requireAdmin(action="관리자 기능"){
-    if(isAdmin)return true;
-    alert(`${action}은 관리자 로그인 후 사용할 수 있습니다.`);
-    setShowAdminLogin(true);
-    return false;
-  }
-  async function handleAdminLogin(email,password){
-    const {data,error}=await supabase.auth.signInWithPassword({email,password});
-    if(error)return {error};
-    const role=await resolveRole(data.user);
-    if(role!=="admin"){
-      await supabase.auth.signOut();
-      setAdminUser(null);
-      setAdminRole("viewer");
-      return {error:{message:"로그인은 되었지만 관리자 권한이 없습니다. VITE_ADMIN_EMAILS 또는 VITE_ADMIN_EMAIL 환경변수의 이메일과 로그인 이메일이 일치하는지 확인해주세요."}};
-    }
-    setAdminUser(data.user);
-    setShowAdminLogin(false);
-    return {};
-  }
-  async function handleAdminLogout(){
-    await supabase.auth.signOut();
-    setAdminUser(null);
-    setAdminRole("viewer");
-  }
-
-  useEffect(()=>{
-    let alive=true;
-    supabase.auth.getSession().then(async({data})=>{
-      if(!alive)return;
-      const user=data?.session?.user||null;
-      setAdminUser(user);
-      await resolveRole(user);
-    });
-    const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_event,session)=>{
-      const user=session?.user||null;
-      setAdminUser(user);
-      await resolveRole(user);
-    });
-    return()=>{alive=false;subscription?.unsubscribe?.();};
-  },[]);
 
   useEffect(()=>{
     async function load(){
@@ -629,8 +374,7 @@ export default function App(){
   async function dbDelete(id){await supabase.from("bookings").delete().eq("id",id);}
 
   function handleFile(e){
-    if(!requireAdmin("엑셀 업로드")){ if(e?.target) e.target.value=""; return; }
-    const file=e.target.files?.[0];if(!file)return;
+    const file=e.target.files[0];if(!file)return;
     setFileName(file.name);setUploadState("parsing");
     const reader=new FileReader();
     reader.onload=async(evt)=>{
@@ -657,23 +401,13 @@ export default function App(){
   }
 
   async function handleSave(form,editIdx){
-    if(!requireAdmin(editIdx!=null?"예약 수정":"예약 등록"))return;
     if(editIdx!=null){const target=rows[editIdx];await dbUpdate(target._id,form);reCalc(rows.map((r,i)=>i===editIdx?{...r,...form}:r));setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 수정 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
     else{const saved=await dbInsert({...form,_src:"manual"});reCalc([...rows,{...form,_id:saved?.id,_src:"manual"}]);setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 등록 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
   }
   async function handleReject(rowIdx){const target=rows[rowIdx];if(target._id)await dbDelete(target._id);reCalc(rows.filter((_,i)=>i!==rowIdx));setNotifs(prev=>prev.map(n=>(n.rowA===rowIdx||n.rowB===rowIdx)?{...n,resolved:true,unread:false}:n));}
-  async function confirmCancel(){if(!requireAdmin("예약 취소")){setCancelTarget(null);return;}if(cancelTarget===null)return;const c=rows[cancelTarget];if(c._id)await dbDelete(c._id);reCalc(rows.filter((_,i)=>i!==cancelTarget));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);setCancelTarget(null);}
-  async function cancelAllConflicts(){if(!requireAdmin("충돌 일괄 취소"))return;const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));const removed=rows.filter((_,i)=>cfIdxs.has(i));for(const r of removed){if(r._id)await dbDelete(r._id);}reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);}
-  async function resetAllData(){
-    if(!requireAdmin("전체 초기화"))return;
-    const pw=window.prompt("초기화를 진행하려면 초기화 PW를 입력하세요.");
-    if(pw===null)return;
-    if(pw!==RESET_PASSWORD){alert("초기화 PW가 일치하지 않습니다.");return;}
-    if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까? 이 작업은 복구할 수 없습니다."))return;
-    await supabase.from("bookings").delete().neq("id",0);
-    reCalc([]);
-    setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);
-  }
+  async function confirmCancel(){if(cancelTarget===null)return;const c=rows[cancelTarget];if(c._id)await dbDelete(c._id);reCalc(rows.filter((_,i)=>i!==cancelTarget));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);setCancelTarget(null);}
+  async function cancelAllConflicts(){const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));const removed=rows.filter((_,i)=>cfIdxs.has(i));for(const r of removed){if(r._id)await dbDelete(r._id);}reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);}
+  async function resetAllData(){if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까?"))return;await supabase.from("bookings").delete().neq("id",0);reCalc([]);setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);}
 
   const monday=addDays(getThisWeekMonday(),weekOffset*7);
   const weekLabel=`${monday.getMonth()+1}월 ${fmtShort(monday)}(월) ~ ${fmtShort(addDays(monday,4))}(금)`;
@@ -697,200 +431,204 @@ export default function App(){
   const gubunList=["전체","1학기","2학기","취업","기획","기타"];
 
   return(
-    <div style={{display:"flex",flexDirection:"column",width:"100vw",height:DASHBOARD_SHELL_HEIGHT,maxWidth:"100vw",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:isMobile?13:14,background:UI.bg,color:UI.text,overflow:"hidden",boxSizing:"border-box"}}>
-      {showAdminLogin&&<AdminLoginModal onClose={()=>setShowAdminLogin(false)} onLogin={handleAdminLogin}/>}
-      {isAdmin&&bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
-      {isAdmin&&typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
-      {isAdmin&&cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
-      <style>{`html, body, #root { width: 100%; height: 100%; margin: 0; } body { overflow: hidden; } * { box-sizing: border-box; } *::-webkit-scrollbar { width: 8px; height: 8px; } *::-webkit-scrollbar-thumb { background: #D0D5DD; border-radius: 999px; } *::-webkit-scrollbar-track { background: transparent; }`}</style>
-      <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={handleFile}/>
+    <div style={{display:"flex",flexDirection:"column",width:"100vw",height:"100vh",maxWidth:"100vw",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:12,background:"#F4F3F1",color:"#1c1c1a",overflow:"hidden",boxSizing:"border-box"}}>
+      {bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
+      {typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
+      {cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
 
       {/* ── Topbar ── */}
-      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:isMobile?10:0,padding:isMobile?"12px 14px":"0 20px",height:isMobile?"auto":60,minHeight:isMobile?58:60,background:UI.surface,borderBottom:`1px solid ${UI.border}`,boxShadow:"0 1px 2px rgba(16,24,40,0.04)",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,fontWeight:900,fontSize:isMobile?17:20,color:UI.text}}>
-          <div style={{width:isMobile?28:30,height:isMobile?28:30,borderRadius:11,background:UI.primary,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 16px rgba(29,158,117,0.20)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:52,background:"#fff",borderBottom:"0.5px solid #E5E5E3",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:9,fontWeight:700,fontSize:16,color:"#1c1c1a"}}>
+          <div style={{width:32,height:32,borderRadius:8,background:"#1D9E75",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <div style={{width:12,height:12,borderRadius:"50%",background:"#fff"}}></div>
           </div>
-          SSAFY 스튜디오 현황
-          {saving&&<span style={{fontSize:12,color:UI.mute,fontWeight:600}}>저장 중...</span>}
+          스튜디오 방송편성 관리
+          {saving&&<span style={{fontSize:11,color:"#aaa",fontWeight:400}}>저장 중...</span>}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          {tab==="dashboard"&&!isMobile&&(
-            <div style={{display:"flex",alignItems:"center",gap:6,background:"#F9FAFB",border:`1px solid ${UI.border}`,borderRadius:12,padding:"0 14px",height:34,fontSize:13,color:UI.sub}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {tab==="dashboard"&&(
+            <div style={{display:"flex",alignItems:"center",gap:6,background:"#F7F7F6",border:"0.5px solid #E5E5E3",borderRadius:8,padding:"0 12px",height:32,fontSize:12,color:"#555"}}>
               <span>📅</span>
               <span style={{fontWeight:500}}>{new Date().getFullYear()}년 {new Date().getMonth()+1}월 {new Date().getDate()}일 ({["일","월","화","수","목","금","토"][new Date().getDay()]})</span>
-              <button style={{...btnGhost,height:24,padding:"0 9px",fontSize:12,marginLeft:4}} onClick={()=>setWeekOffset(0)}>오늘</button>
+              <button style={{...btn,height:22,padding:"0 8px",fontSize:11,marginLeft:4}} onClick={()=>setWeekOffset(0)}>오늘</button>
             </div>
           )}
-          {isAdmin ? (
-            <button style={{...btnGhost,height:34,fontSize:12,padding:"0 12px",fontWeight:900}} onClick={handleAdminLogout}>관리자 로그아웃</button>
-          ) : (
-            <button style={{...btnPrimary,height:34,fontSize:12,padding:"0 12px"}} onClick={()=>setShowAdminLogin(true)}>관리자 로그인</button>
-          )}
-          <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,height:34,position:"relative",fontSize:16,padding:"0 12px",...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setTab("notifications");}}>
+          <button style={{...btn,height:32,position:"relative",fontSize:13,padding:"0 10px"}} onClick={()=>setTab("notifications")}>
             🔔{unread>0&&<span style={{position:"absolute",top:3,right:3,width:6,height:6,borderRadius:"50%",background:"#E24B4A",border:"1.5px solid #fff"}}></span>}
           </button>
-          <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,height:34,color:UI.danger,borderColor:"#FDA29B",fontSize:15,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;resetAllData();}}>🗑</button>
+          <button style={{...btn,height:32,color:"#A32D2D",borderColor:"#F09595",fontSize:12}} onClick={resetAllData}>🗑</button>
         </div>
       </div>
 
-      <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0,padding:isMobile?"10px 12px 92px 12px":"12px 16px 12px 16px",gap:isMobile?0:16,position:"relative"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
         {/* ── 아이콘 전용 사이드바 ── */}
-        <nav style={isMobile?{position:"fixed",left:12,right:12,bottom:10,height:66,background:UI.dark,border:"1px solid #1D2939",borderRadius:22,display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"space-around",padding:"6px",gap:6,overflow:"hidden",boxShadow:"0 14px 32px rgba(16,24,40,0.22)",zIndex:1000}:{width:96,background:UI.dark,borderRight:"1px solid #1D2939",borderRadius:20,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",padding:"12px 0",gap:6,overflow:"hidden",boxShadow:"0 10px 24px rgba(16,24,40,0.10)"}}>
-          {(isMobile?([
+        <nav style={{width:64,background:"#fff",borderRight:"0.5px solid #E5E5E3",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",padding:"12px 0",gap:4}}>
+          {[
             {id:"dashboard", icon:"🏠", label:"대시보드"},
+            {id:"upload",    icon:"📤", label:"편성표"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
-            {id:"booking", icon:"✚", label:"예약등록", adminOnly:true},
-          ]):([
-            {id:"dashboard", icon:"🏠", label:"대시보드"},
-            {id:"schedule",  icon:"📅", label:"스케줄"},
-            {id:"notifications", icon:"🔔", label:"알림", adminOnly:true},
-          ])).map(item=>{
-            const active=tab===item.id;
-            return (
+            {id:"notifications", icon:"🔔", label:"알림"},
+          ].map(item=>(
             <button key={item.id}
-              disabled={item.adminOnly&&!isAdmin}
-              title={item.adminOnly&&!isAdmin?adminLockedTitle:undefined}
-              style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:item.adminOnly&&!isAdmin?"not-allowed":"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:active?UI.primary:"transparent",position:"relative",transition:"all .15s ease",opacity:item.adminOnly&&!isAdmin?0.42:1}}
-              onClick={()=>{if(item.adminOnly&&!isAdmin)return;item.id==="booking"?setBookingModal("new"):setTab(item.id);}}>
-              <span style={{fontSize:22}}>{item.icon}</span>
-              <span style={{fontSize:12,color:active?"#fff":"#CBD5E1",fontWeight:active?900:700,whiteSpace:"nowrap"}}>{item.label}</span>
+              style={{width:44,height:44,borderRadius:10,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,background:tab===item.id?"#F0FBF6":"transparent",position:"relative"}}
+              onClick={()=>setTab(item.id)}>
+              <span style={{fontSize:18}}>{item.icon}</span>
+              <span style={{fontSize:9,color:tab===item.id?"#1D9E75":"#aaa",fontWeight:tab===item.id?600:400}}>{item.label}</span>
               {item.id==="notifications"&&unread>0&&<span style={{position:"absolute",top:6,right:6,width:6,height:6,borderRadius:"50%",background:"#E24B4A"}}></span>}
             </button>
-          )})}
-          {!isMobile&&<div style={{flex:1}}></div>}
+          ))}
+          <div style={{flex:1}}></div>
+          <button style={{width:44,height:44,borderRadius:10,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,background:"transparent"}}
+            onClick={()=>setTab("schedule")}>
+            <span style={{fontSize:18}}>⚙️</span>
+            <span style={{fontSize:9,color:"#aaa"}}>설정</span>
+          </button>
         </nav>
 
-        <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0,minHeight:0,background:UI.bg,width:isMobile?"100%":undefined}}>
+        <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0,minHeight:0}}>
 
           {/* ── 대시보드 ── */}
           {tab==="dashboard"&&(
-            <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto",overflowX:"hidden",minHeight:0,paddingRight:4}}>
+            <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}}>
 
-              {/* sticky 상단 컨트롤 영역: LIVE 배너 + 주간 헤더/필터 */}
-              <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(245,247,250,0.94)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",padding:isMobile?"5px 0 6px 0":"10px 16px 10px 0",boxShadow:"0 10px 20px rgba(16,24,40,0.07)",borderBottom:`1px solid ${UI.border}`}}>
-                <div style={{overflowX:"visible",paddingBottom:isMobile?4:0}}><LiveBanner rows={rows} onMore={()=>setTab("schedule")} compact={isMobile}/></div>
-
-                {isMobile ? (
-                  <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
-                    {/* 날짜 필터 라인 */}
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,flex:1,minWidth:0}}>
-                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="today"?UI.dark:"#fff",color:mobileAgendaMode==="today"?"#fff":UI.text,borderColor:mobileAgendaMode==="today"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("today")}>오늘</button>
-                        <button style={{...btnGhost,height:36,justifyContent:"center",background:mobileAgendaMode==="week"?UI.dark:"#fff",color:mobileAgendaMode==="week"?"#fff":UI.text,borderColor:mobileAgendaMode==="week"?UI.dark:UI.border,fontSize:13,fontWeight:950}} onClick={()=>setMobileAgendaMode("week")}>이번주</button>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                        <button style={{...btnGhost,width:34,height:36,padding:0,justifyContent:"center",fontSize:13}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
-                        <span style={{height:36,padding:"0 10px",borderRadius:12,background:"#fff",border:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:UI.sub,fontWeight:900,whiteSpace:"nowrap"}}>{weekLabel}</span>
-                        <button style={{...btnGhost,width:34,height:36,padding:0,justifyContent:"center",fontSize:13}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
-                      </div>
-                    </div>
-
-                    {/* 스튜디오별 버튼 */}
-                    <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",overflowY:"hidden",paddingBottom:4}}>
-                      <button style={{...btnGhost,height:32,fontSize:12,padding:"0 12px",flexShrink:0,fontWeight:activeStudios.size===0?950:800,background:activeStudios.size===0?UI.dark:"#fff",color:activeStudios.size===0?"#fff":UI.sub,borderColor:activeStudios.size===0?UI.dark:UI.border}} onClick={()=>setActiveStudios(new Set())}>전체</button>
-                      {STUDIOS.map(s=>{
-                        const on=activeStudios.has(s.id);
-                        return(
-                          <button key={s.id}
-                            style={{...btnGhost,height:32,fontSize:12,padding:"0 11px",flexShrink:0,display:"flex",alignItems:"center",gap:6,background:on?`${s.color}15`:"#fff",color:on?s.color:UI.sub,borderColor:on?s.color:UI.border,fontWeight:on?950:800}}
-                            onClick={()=>toggleStudio(s.id)}>
-                            <span style={{width:8,height:8,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
-                            {s.id}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexDirection:"row"}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:18,fontWeight:900,color:UI.text,whiteSpace:"nowrap"}}>주간 전체 스튜디오 현황</span>
-                    </div>
-                    {/* 주차 이동 */}
-                    <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
-                      <button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
-                      <span style={{fontSize:12,color:UI.sub,minWidth:118,textAlign:"center",fontWeight:800}}>{weekLabel}</span>
-                      <button style={{...btnGhost,width:30,height:30,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
-                    </div>
-                    {/* 스튜디오 필터 */}
-                    <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0,overflowX:"auto",overflowY:"hidden",paddingBottom:3}}>
-                        <button style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,fontWeight:activeStudios.size===0?900:700,background:activeStudios.size===0?UI.dark:"#fff",color:activeStudios.size===0?"#fff":UI.sub,borderColor:activeStudios.size===0?UI.dark:UI.border}} onClick={()=>setActiveStudios(new Set())}>전체</button>
-                        {STUDIOS.map(s=>{
-                          const on=activeStudios.has(s.id);
-                          return(
-                            <button key={s.id}
-                              style={{...btnGhost,height:30,fontSize:12,padding:"0 10px",flexShrink:0,display:"flex",alignItems:"center",gap:6,background:on?`${s.color}15`:"#fff",color:on?s.color:UI.sub,borderColor:on?s.color:UI.border,fontWeight:on?900:700}}
-                              onClick={()=>toggleStudio(s.id)}>
-                              <span style={{width:8,height:8,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
-                              {s.id}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
-                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnBlue,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;downloadSchedule(rows);}}>⬇ 엑셀 다운로드</button>
-                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;fileRef.current?.click();}}>⬆ 엑셀 업로드</button>
-                      <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnPrimary,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal("new");}}>✚ 예약 등록</button>
-                    </div>
-                  </div>
-                )}
+              {/* LIVE 배너 */}
+              <div style={{flexShrink:0,padding:"10px 16px 0"}}>
+                <LiveBanner rows={rows} onMore={()=>setTab("schedule")}/>
               </div>
 
               {/* 주간 현황 영역 */}
-              <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:isMobile?"4px 0 16px 0":"10px 16px 16px 0",gap:8,flexShrink:0,minHeight:isMobile?"60vh":undefined}}>
-                {isMobile ? (
-                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
-                ) : (
-                  <div style={{...card,overflow:"auto",height:"calc(100vh - 238px)",minHeight:420,maxHeight:"calc(100vh - 238px)",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
-                    <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
+              <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",padding:"10px 16px 10px",minHeight:0,gap:8}}>
+                {/* 헤더: 제목 + 주차이동 + 필터 */}
+                <div style={{flexShrink:0,display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"#1c1c1a",whiteSpace:"nowrap"}}>주간 전체 스튜디오 현황</span>
+                  {/* 주차 이동 */}
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <button style={{...btn,width:24,height:24,padding:0,justifyContent:"center",fontSize:12}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
+                    <span style={{fontSize:12,color:"#555",minWidth:110,textAlign:"center"}}>{weekLabel}</span>
+                    <button style={{...btn,width:24,height:24,padding:0,justifyContent:"center",fontSize:12}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
                   </div>
-                )}
+                  {/* 스튜디오 필터 */}
+                  <div style={{display:"flex",alignItems:"center",gap:4,flex:1,overflowX:"auto",paddingBottom:1}}>
+                    <button style={{...btn,height:26,fontSize:11,padding:"0 10px",flexShrink:0,fontWeight:activeStudios.size===0?600:400,background:activeStudios.size===0?"#1c1c1a":"#fff",color:activeStudios.size===0?"#fff":"#555",borderColor:activeStudios.size===0?"#1c1c1a":"#E5E5E3"}} onClick={()=>setActiveStudios(new Set())}>전체</button>
+                    {STUDIOS.map(s=>{
+                      const on=activeStudios.has(s.id);
+                      return(
+                        <button key={s.id}
+                          style={{...btn,height:26,fontSize:11,padding:"0 10px",flexShrink:0,display:"flex",alignItems:"center",gap:4,background:on?`${s.color}15`:"#fff",color:on?s.color:"#555",borderColor:on?s.color:"#E5E5E3",fontWeight:on?600:400}}
+                          onClick={()=>toggleStudio(s.id)}>
+                          <span style={{width:6,height:6,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
+                          {s.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* 다운로드 / 예약 등록 */}
+                  <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    <button style={{...btnB,height:28,fontSize:12}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>
+                    <button style={{...btnP,height:28,fontSize:12}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
+                  </div>
+                </div>
+
+                {/* 주간 테이블 */}
+                <div style={{flex:1,overflow:"auto",background:"#fff",border:"0.5px solid #E5E5E3",borderRadius:10,minHeight:0}}>
+                  <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
+                </div>
 
                 {/* 충돌 알림 */}
                 {conflicts.length>0&&(
-                  <div style={{flexShrink:0,border:"0.5px solid #F09595",background:"#FFF8F8",borderRadius:12,padding:"8px 12px",maxHeight:110,overflowY:"auto",display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{flexShrink:0,border:"0.5px solid #F09595",background:"#FFF8F8",borderRadius:8,padding:"6px 12px",maxHeight:90,overflowY:"auto",display:"flex",alignItems:"center",gap:12}}>
                     <span style={{fontSize:12,fontWeight:600,color:"#A32D2D",flexShrink:0}}>⚠️ 충돌 {conflicts.length}건</span>
                     <div style={{flex:1,display:"flex",gap:8,flexWrap:"wrap"}}>
                       {conflicts.map((cf,i)=>(
                         <span key={i} style={{fontSize:11,color:"#791F1F",background:"#FCEBEB",padding:"2px 8px",borderRadius:20}}>{cf.studio} {cf.date} {cf.timeA}↔{cf.timeB}</span>
                       ))}
                     </div>
-                    <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnR,height:24,fontSize:11,flexShrink:0,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>
+                    <button style={{...btnR,height:24,fontSize:11,flexShrink:0}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>
                   </div>
                 )}
               </div>
             </div>
           )}
-
+          {tab==="upload"&&(
+            <>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:12}}>편성표 업로드</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,height:"calc(100vh - 110px)",overflow:"hidden"}}>
+                <div style={{...panel,marginBottom:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                  <div style={{fontSize:14,fontWeight:600,marginBottom:5}}>📊 엑셀 일괄 업로드</div>
+                  <div style={{fontSize:12,color:"#888",marginBottom:12}}>VBA로 생성한 방송편성표 엑셀을 그대로 업로드하세요</div>
+                  <div style={{flex:1,border:uploadState==="done"?"2px solid #1D9E75":"2px dashed #ccc",borderRadius:14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:uploadState==="done"?"#F0FBF6":"#fafaf9",gap:12,minHeight:0}}
+                    onClick={()=>fileRef.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();handleFile({target:{files:e.dataTransfer.files}});}}>
+                    <div style={{fontSize:60}}>{uploadState==="done"?"✅":uploadState==="parsing"?"⏳":uploadState==="error"?"❌":"📂"}</div>
+                    <div style={{fontSize:14,fontWeight:500,color:uploadState==="done"?"#1D9E75":"#555",textAlign:"center"}}>
+                      {uploadState==="idle"&&"파일을 클릭하거나 드래그하세요"}
+                      {uploadState==="parsing"&&"파싱 중..."}
+                      {uploadState==="done"&&fileName}
+                      {uploadState==="error"&&"업로드 실패"}
+                    </div>
+                    <div style={{fontSize:12,color:"#aaa"}}>B열(장소) 자동 인식 · .xlsx .xls 지원</div>
+                    <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={handleFile}/>
+                  </div>
+                  {parseLog.length>0&&(
+                    <div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#f8f8f6",display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                      {parseLog.map((l,i)=><div key={i} style={{fontSize:12,lineHeight:1.8,color:l.startsWith("⚠")||l.startsWith("❌")?"#A32D2D":"#0F6E56"}}>{l}</div>)}
+                    </div>
+                  )}
+                </div>
+                <div style={{...panel,marginBottom:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                  <div style={{fontSize:14,fontWeight:600,marginBottom:5}}>✚ 스튜디오 직접 예약</div>
+                  <div style={{fontSize:12,color:"#888",marginBottom:10}}>스튜디오를 선택해 날짜·시간을 직접 입력해 예약하세요</div>
+                  <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignContent:"start",overflowY:"auto",minHeight:0}}>
+                    {STUDIOS.map(s=>(
+                      <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:`1px solid ${s.color}30`,borderRadius:10,background:`${s.color}08`}}>
+                        <span style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{width:10,height:10,borderRadius:"50%",background:s.color,flexShrink:0}}></span>
+                          <span style={{fontSize:16,fontWeight:500,color:"#333"}}>{s.id}</span>
+                        </span>
+                        <button style={{...btn,height:30,fontSize:15,padding:"0 12px",background:s.color,borderColor:s.color,color:"#fff"}} onClick={()=>setBookingModal("new")}>예약</button>
+                      </div>
+                    ))}
+                    {/* ★ 직접 입력 예약 버튼 */}
+                    <div style={{gridColumn:"1 / -1",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",border:"1.5px dashed #ccc",borderRadius:10,background:"#f8f8f6",marginTop:4}}>
+                      <span style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:20}}>✏</span>
+                        <div>
+                          <div style={{fontSize:16,fontWeight:600,color:"#555"}}>스튜디오 직접 입력 예약</div>
+                          <div style={{fontSize:14,color:"#aaa"}}>목록에 없는 강의장 예약</div>
+                        </div>
+                      </span>
+                      <button style={{...btnP,height:30,fontSize:15,padding:"0 16px"}} onClick={()=>setBookingModal("new")}>예약하기</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
           {tab==="schedule"&&(
-            <div style={{padding:isMobile?"14px 0 18px 0":"20px 24px 24px 0",display:"flex",flexDirection:"column",minHeight:0,flex:1,overflowY:"auto",overflowX:"hidden",gap:14}}>
-              <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:10,flexDirection:isMobile?"column":"row"}}>
-                <div style={{fontSize:isMobile?20:22,fontWeight:900,color:UI.text}}>스케줄 목록</div>
-                <div style={{display:"flex",alignItems:"center",gap:isMobile?6:6,flexWrap:isMobile?"nowrap":"wrap",width:isMobile?"100%":"auto",minWidth:0,overflowX:isMobile?"auto":"visible",paddingBottom:isMobile?2:0,WebkitOverflowScrolling:"touch"}}>
+            <>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                <div style={{fontSize:14,fontWeight:600}}>스케줄 목록</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   {/* 스튜디오 필터 */}
-                  <select style={{height:40,padding:isMobile?"0 8px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontWeight:700,color:UI.sub,flex:isMobile?"1 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"34%":undefined}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
+                  <select style={{height:28,padding:"0 8px",borderRadius:6,border:"0.5px solid #E5E5E3",fontSize:12,background:"#fff"}} value={filterStudio} onChange={e=>setFilterStudio(e.target.value)}>
                     <option>전체</option>{STUDIOS.map(s=><option key={s.id}>{s.id}</option>)}
                   </select>
                   {/* 학기(구분) 필터 */}
-                  <select style={{height:40,padding:isMobile?"0 8px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontWeight:700,color:UI.sub,flex:isMobile?"1 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"28%":undefined}} value={filterGubun} onChange={e=>setFilterGubun(e.target.value)}>
+                  <select style={{height:28,padding:"0 8px",borderRadius:6,border:"0.5px solid #E5E5E3",fontSize:12,background:"#fff"}} value={filterGubun} onChange={e=>setFilterGubun(e.target.value)}>
                     {gubunList.map(g=><option key={g}>{g}</option>)}
                   </select>
                   {/* 날짜 필터 */}
-                  <input type="date" style={{height:40,padding:isMobile?"0 6px":"0 12px",borderRadius:10,border:`1px solid ${UI.border}`,fontSize:isMobile?13:14,background:"#fff",fontFamily:"inherit",fontWeight:700,color:UI.sub,flex:isMobile?"1.25 1 0":"0 0 auto",minWidth:isMobile?0:undefined,maxWidth:isMobile?"38%":undefined}} value={filterDate} onChange={e=>setFilterDate(e.target.value)}/>
+                  <input type="date" style={{height:34,padding:"0 8px",borderRadius:8,border:"0.5px solid #ccc",fontSize:16,background:"#fff",fontFamily:"inherit"}} value={filterDate} onChange={e=>setFilterDate(e.target.value)}/>
                   {(filterStudio!=="전체"||filterGubun!=="전체"||filterDate)&&(
-                    <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
+                    <button style={{...btn,height:34,fontSize:15,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
-                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnBlue,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;downloadSchedule(filteredRows);}}>⬇ 다운로드</button>}
-                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnGhost,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;fileRef.current?.click();}}>⬆ 엑셀 업로드</button>}
-                  {!isMobile&&<button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnPrimary,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal("new");}}>✚ 예약 등록</button>}
+                  <span style={{fontSize:18,color:"#888"}}>{filteredRows.length}건</span>
+                  <button style={{...btnB,height:34,fontSize:18}} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>
+                  <button style={{...btnP,height:34,fontSize:18}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
                 </div>
               </div>
-              <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
-                <table style={{width:"100%",minWidth:isMobile?1040:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
-                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+              <div style={{background:"#fff",border:"0.5px solid #e5e5e3",borderRadius:12,overflow:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
+                  <thead><tr style={{background:"#f8f8f6",borderBottom:"0.5px solid #e5e5e3"}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:11,fontWeight:500,color:"#888",textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredRows.map((row,i)=>{
                       const realIdx=rows.indexOf(row);
@@ -898,7 +636,7 @@ export default function App(){
                       const noSt=!row.장소;
                       const isPrep=row.내용==="방송준비"||row.구분==="방송준비";
                       const rowBg=isCf?"#FFF8F8":isPrep?"#f5f5f4":noSt?"#FFFBF0":"#fff";
-                      const tdStyle={padding:"10px 10px",fontSize:14,borderRight:`1px solid ${UI.softBorder}`,fontWeight:600};
+                      const tdStyle={padding:"4px 8px",fontSize:12,borderRight:"0.5px solid #f0f0ee"};
                       const td=(children,extra={})=><td style={{...tdStyle,color:isPrep?"#aaa":undefined,...extra}}>{children}</td>;
                       return(
                         <tr key={i} style={{borderBottom:"0.5px solid #f0f0ee",background:rowBg}}>
@@ -909,21 +647,17 @@ export default function App(){
                           {td(row.강사명,{maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}{td(row.시작시간)}{td(row.종료시간)}{td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:isPrep?<span style={bd("gray")}>방송준비</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
-                          <td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
-                            <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btn,height:28,padding:"0 10px",fontSize:isMobile?13:14,color:"#185FA5",borderColor:"#B5D4F4",fontWeight:800,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setBookingModal(realIdx);}}>수정</button>
-                          </td>
-                          <td style={{padding:"8px 8px",textAlign:"center"}}>
-                            <button disabled={!isAdmin} title={!isAdmin?adminLockedTitle:undefined} style={{...btnR,height:28,padding:"0 10px",fontSize:isMobile?13:14,fontWeight:800,...(!isAdmin?disabledAdminStyle:{})}} onClick={()=>{if(!isAdmin)return;setCancelTarget(realIdx);}}>취소</button>
-                          </td>
+                          <td style={{padding:"5px 9px",borderRight:"0.5px solid #f0f0ee"}}><button style={{...btn,height:24,padding:"0 8px",fontSize:15,color:"#185FA5",borderColor:"#B5D4F4"}} onClick={()=>setBookingModal(realIdx)}>✏</button></td>
+                          <td style={{padding:"5px 9px"}}><button style={{...btnR,height:24,padding:"0 8px",fontSize:15}} onClick={()=>setCancelTarget(realIdx)}>✕</button></td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </>
           )}
-          {isAdmin&&tab==="notifications"&&(
+          {tab==="notifications"&&(
             <>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                 <div style={{fontSize:14,fontWeight:600}}>알림</div>
