@@ -29,6 +29,8 @@ const ALIASES = {
 const DAYS=["월","화","수","목","금"];
 const HOURS=Array.from({length:12},(_,i)=>`${String(i+7).padStart(2,"0")}:00`);
 const DASHBOARD_SHELL_HEIGHT = "100dvh";
+const ADMIN_EMAILS = String(import.meta.env?.VITE_ADMIN_EMAILS || "").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
+const RESET_PASSWORD = import.meta.env?.VITE_RESET_PASSWORD || "ssafy-reset";
 
 function excelDateToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(typeof val==="number"&&val>1000){const d=new Date(Math.round((val-25569)*86400*1000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;}return s;}
 function excelTimeToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{1,2}:\d{2}$/.test(s))return s.padStart(5,"0");if(typeof val==="number"&&val>=0&&val<1){const m=Math.round(val*24*60);return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;}return s;}
@@ -172,7 +174,7 @@ function CancelModal({row,onClose,onConfirm}){
   );
 }
 
-function BlockPopup({row,idx,pos,onClose,onEdit,onCancel}){
+function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
   const color=getColor(row.장소);
   return(
     <div style={{position:"fixed",top:Math.min(pos.y+10,window.innerHeight-340),left:Math.min(pos.x+10,window.innerWidth-280),zIndex:3000,background:"#fff",borderRadius:12,border:"0.5px solid #e5e5e3",boxShadow:"0 8px 28px rgba(0,0,0,0.18)",width:260,padding:"14px 16px"}} onClick={e=>e.stopPropagation()}>
@@ -186,15 +188,15 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel}){
         {row.강사명&&<div><b>강사:</b> {row.강사명}</div>}
         <div><b>날짜:</b> {row.날짜} {row.요일&&`(${row.요일})`}</div><div><b>시간:</b> {row.시작시간} ~ {row.종료시간}</div>
       </div>
-      <div style={{display:"flex",gap:6}}>
+      {canManage&&<div style={{display:"flex",gap:6}}>
         <button style={{...btn,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onEdit(idx);onClose();}}>✏ 수정</button>
         <button style={{...btnR,flex:1,height:30,fontSize:12,justifyContent:"center"}} onClick={()=>{onCancel(idx);onClose();}}>✕ 취소</button>
-      </div>
+      </div>}
     </div>
   );
 }
 
-function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel}){
+function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canManage=false}){
   const [popup,setPopup]=useState(null);
   const dayDates=DAYS.map((_,i)=>fmtFull(addDays(monday,i)));
   const conflictIdxs=new Set();
@@ -216,7 +218,7 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel}){
   }
   return(
     <div style={{position:"relative",width:"100%",minWidth:980,overflow:"visible"}} onClick={()=>setPopup(null)}>
-      {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel}/>}
+      {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel} canManage={canManage}/>}
       <table style={{width:"100%",borderCollapse:"separate",borderSpacing:0,tableLayout:"fixed"}}>
         <thead>
           <tr>
@@ -389,7 +391,7 @@ function LiveBanner({rows, onMore, compact=false}){
   );
 }
 
-function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit, onCancel}){
+function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit, onCancel, canManage=false}){
   const today=fmtFull(new Date());
   const selectedWeekDates=DAYS.map((day,i)=>({day,date:fmtFull(addDays(monday,i)),label:fmtShort(addDays(monday,i))}));
   const selectedWeekSet=new Set(selectedWeekDates.map(d=>d.date));
@@ -435,10 +437,10 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
             {row.길이&&<span>⏱ {row.길이}</span>}
           </div>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
+        {canManage&&<div style={{display:"flex",flexDirection:"column",gap:6,justifyContent:"center",flexShrink:0}}>
           <button style={{...btnGhost,width:38,height:34,padding:0,justifyContent:"center",fontSize:14}} onClick={()=>onEdit(row._idx)}>✏</button>
           <button style={{...btnR,width:38,height:34,padding:0,justifyContent:"center",fontSize:14,borderRadius:10}} onClick={()=>onCancel(row._idx)}>✕</button>
-        </div>
+        </div>}
       </div>
     );
   };
@@ -475,6 +477,39 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
   );
 }
 
+function AdminLoginModal({onClose,onLogin}){
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  async function submit(){
+    if(!email.trim()||!password){setErr("이메일과 비밀번호를 입력해주세요.");return;}
+    setBusy(true);setErr("");
+    const {error}=await onLogin(email.trim(),password);
+    setBusy(false);
+    if(error)setErr(error.message||"관리자 로그인에 실패했습니다.");
+  }
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(16,24,40,0.48)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:4000,padding:20}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{width:380,maxWidth:"100%",background:"#fff",borderRadius:20,border:`1px solid ${UI.border}`,boxShadow:"0 24px 60px rgba(16,24,40,0.25)",overflow:"hidden"}}>
+        <div style={{padding:"20px 22px",borderBottom:`1px solid ${UI.border}`}}>
+          <div style={{fontSize:18,fontWeight:950,color:UI.text}}>관리자 로그인</div>
+          <div style={{fontSize:13,color:UI.sub,marginTop:5,lineHeight:1.5}}>관리자만 업로드, 다운로드, 예약 등록, 수정, 취소, 초기화를 사용할 수 있습니다.</div>
+        </div>
+        <div style={{padding:22,display:"flex",flexDirection:"column",gap:12}}>
+          <div><span style={lbl}>이메일</span><input style={{...inp,height:42,fontSize:14}} type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com"/></div>
+          <div><span style={lbl}>비밀번호</span><input style={{...inp,height:42,fontSize:14}} type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="비밀번호" onKeyDown={e=>{if(e.key==="Enter")submit();}}/></div>
+          {err&&<div style={{fontSize:13,color:UI.danger,background:"#FFF1F0",border:"1px solid #FDA29B",borderRadius:10,padding:"9px 11px",lineHeight:1.5}}>{err}</div>}
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
+            <button style={{...btnGhost,height:38}} onClick={onClose} disabled={busy}>취소</button>
+            <button style={{...btnPrimary,height:38}} onClick={submit} disabled={busy}>{busy?"확인 중...":"로그인"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
   const [tab,setTab]=useState("dashboard");
   const [rows,setRows]=useState([]);
@@ -491,6 +526,9 @@ export default function App(){
   const [activeStudios,setActiveStudios]=useState(new Set()); // 빈 Set = 전체 표시
   const [fileName,setFileName]=useState("");
   const [saving,setSaving]=useState(false);
+  const [adminUser,setAdminUser]=useState(null);
+  const [adminRole,setAdminRole]=useState("viewer");
+  const [showAdminLogin,setShowAdminLogin]=useState(false);
   const fileRef=useRef();
   const [isMobile,setIsMobile]=useState(()=>typeof window!=="undefined"&&window.innerWidth<=900);
   const [mobileAgendaMode,setMobileAgendaMode]=useState("today");
@@ -510,6 +548,60 @@ export default function App(){
     });
   }
 
+  async function resolveRole(user){
+    if(!user){setAdminRole("viewer");return "viewer";}
+    const email=(user.email||"").toLowerCase();
+    let role=ADMIN_EMAILS.includes(email)?"admin":"viewer";
+    try{
+      const {data}=await supabase.from("profiles").select("role").eq("id",user.id).maybeSingle();
+      if(data?.role)role=data.role;
+    }catch(e){/* profiles 테이블이 없어도 앱은 뷰어 모드로 동작 */}
+    setAdminRole(role);
+    return role;
+  }
+  const isAdmin=!!adminUser&&adminRole==="admin";
+  function requireAdmin(action="관리자 기능"){
+    if(isAdmin)return true;
+    alert(`${action}은 관리자 로그인 후 사용할 수 있습니다.`);
+    setShowAdminLogin(true);
+    return false;
+  }
+  async function handleAdminLogin(email,password){
+    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+    if(error)return {error};
+    const role=await resolveRole(data.user);
+    if(role!=="admin"){
+      await supabase.auth.signOut();
+      setAdminUser(null);
+      setAdminRole("viewer");
+      return {error:{message:"로그인은 되었지만 관리자 권한이 없습니다. profiles.role 또는 VITE_ADMIN_EMAILS 설정을 확인해주세요."}};
+    }
+    setAdminUser(data.user);
+    setShowAdminLogin(false);
+    return {};
+  }
+  async function handleAdminLogout(){
+    await supabase.auth.signOut();
+    setAdminUser(null);
+    setAdminRole("viewer");
+  }
+
+  useEffect(()=>{
+    let alive=true;
+    supabase.auth.getSession().then(async({data})=>{
+      if(!alive)return;
+      const user=data?.session?.user||null;
+      setAdminUser(user);
+      await resolveRole(user);
+    });
+    const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_event,session)=>{
+      const user=session?.user||null;
+      setAdminUser(user);
+      await resolveRole(user);
+    });
+    return()=>{alive=false;subscription?.unsubscribe?.();};
+  },[]);
+
   useEffect(()=>{
     async function load(){
       const {data,error}=await supabase.from("bookings").select("*").order("created_at",{ascending:true});
@@ -524,7 +616,8 @@ export default function App(){
   async function dbDelete(id){await supabase.from("bookings").delete().eq("id",id);}
 
   function handleFile(e){
-    const file=e.target.files[0];if(!file)return;
+    if(!requireAdmin("엑셀 업로드")){ if(e?.target) e.target.value=""; return; }
+    const file=e.target.files?.[0];if(!file)return;
     setFileName(file.name);setUploadState("parsing");
     const reader=new FileReader();
     reader.onload=async(evt)=>{
@@ -551,13 +644,23 @@ export default function App(){
   }
 
   async function handleSave(form,editIdx){
+    if(!requireAdmin(editIdx!=null?"예약 수정":"예약 등록"))return;
     if(editIdx!=null){const target=rows[editIdx];await dbUpdate(target._id,form);reCalc(rows.map((r,i)=>i===editIdx?{...r,...form}:r));setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 수정 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
     else{const saved=await dbInsert({...form,_src:"manual"});reCalc([...rows,{...form,_id:saved?.id,_src:"manual"}]);setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 등록 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
   }
   async function handleReject(rowIdx){const target=rows[rowIdx];if(target._id)await dbDelete(target._id);reCalc(rows.filter((_,i)=>i!==rowIdx));setNotifs(prev=>prev.map(n=>(n.rowA===rowIdx||n.rowB===rowIdx)?{...n,resolved:true,unread:false}:n));}
-  async function confirmCancel(){if(cancelTarget===null)return;const c=rows[cancelTarget];if(c._id)await dbDelete(c._id);reCalc(rows.filter((_,i)=>i!==cancelTarget));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);setCancelTarget(null);}
-  async function cancelAllConflicts(){const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));const removed=rows.filter((_,i)=>cfIdxs.has(i));for(const r of removed){if(r._id)await dbDelete(r._id);}reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);}
-  async function resetAllData(){if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까?"))return;await supabase.from("bookings").delete().neq("id",0);reCalc([]);setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);}
+  async function confirmCancel(){if(!requireAdmin("예약 취소")){setCancelTarget(null);return;}if(cancelTarget===null)return;const c=rows[cancelTarget];if(c._id)await dbDelete(c._id);reCalc(rows.filter((_,i)=>i!==cancelTarget));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);setCancelTarget(null);}
+  async function cancelAllConflicts(){if(!requireAdmin("충돌 일괄 취소"))return;const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));const removed=rows.filter((_,i)=>cfIdxs.has(i));for(const r of removed){if(r._id)await dbDelete(r._id);}reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);}
+  async function resetAllData(){
+    if(!requireAdmin("전체 초기화"))return;
+    const pw=window.prompt("초기화를 진행하려면 초기화 PW를 입력하세요.");
+    if(pw===null)return;
+    if(pw!==RESET_PASSWORD){alert("초기화 PW가 일치하지 않습니다.");return;}
+    if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까? 이 작업은 복구할 수 없습니다."))return;
+    await supabase.from("bookings").delete().neq("id",0);
+    reCalc([]);
+    setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);
+  }
 
   const monday=addDays(getThisWeekMonday(),weekOffset*7);
   const weekLabel=`${monday.getMonth()+1}월 ${fmtShort(monday)}(월) ~ ${fmtShort(addDays(monday,4))}(금)`;
@@ -582,9 +685,10 @@ export default function App(){
 
   return(
     <div style={{display:"flex",flexDirection:"column",width:"100vw",height:DASHBOARD_SHELL_HEIGHT,maxWidth:"100vw",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:isMobile?13:14,background:UI.bg,color:UI.text,overflow:"hidden",boxSizing:"border-box"}}>
-      {bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
-      {typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
-      {cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
+      {showAdminLogin&&<AdminLoginModal onClose={()=>setShowAdminLogin(false)} onLogin={handleAdminLogin}/>}
+      {isAdmin&&bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
+      {isAdmin&&typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
+      {isAdmin&&cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
       <style>{`html, body, #root { width: 100%; height: 100%; margin: 0; } body { overflow: hidden; } * { box-sizing: border-box; } *::-webkit-scrollbar { width: 8px; height: 8px; } *::-webkit-scrollbar-thumb { background: #D0D5DD; border-radius: 999px; } *::-webkit-scrollbar-track { background: transparent; }`}</style>
       <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={handleFile}/>
 
@@ -605,30 +709,35 @@ export default function App(){
               <button style={{...btnGhost,height:24,padding:"0 9px",fontSize:12,marginLeft:4}} onClick={()=>setWeekOffset(0)}>오늘</button>
             </div>
           )}
-          <button style={{...btnGhost,height:34,position:"relative",fontSize:16,padding:"0 12px"}} onClick={()=>setTab("notifications")}>
+          {isAdmin ? (
+            <button style={{...btnGhost,height:34,fontSize:12,padding:"0 12px",fontWeight:900}} onClick={handleAdminLogout}>관리자 로그아웃</button>
+          ) : (
+            <button style={{...btnPrimary,height:34,fontSize:12,padding:"0 12px"}} onClick={()=>setShowAdminLogin(true)}>관리자 로그인</button>
+          )}
+          {isAdmin&&<button style={{...btnGhost,height:34,position:"relative",fontSize:16,padding:"0 12px"}} onClick={()=>setTab("notifications")}>
             🔔{unread>0&&<span style={{position:"absolute",top:3,right:3,width:6,height:6,borderRadius:"50%",background:"#E24B4A",border:"1.5px solid #fff"}}></span>}
-          </button>
-          <button style={{...btnGhost,height:34,color:UI.danger,borderColor:"#FDA29B",fontSize:15}} onClick={resetAllData}>🗑</button>
+          </button>}
+          {isAdmin&&<button style={{...btnGhost,height:34,color:UI.danger,borderColor:"#FDA29B",fontSize:15}} onClick={resetAllData}>🗑</button>}
         </div>
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0,padding:isMobile?"10px 12px 92px 12px":"12px 16px 12px 16px",gap:isMobile?0:16,position:"relative"}}>
         {/* ── 아이콘 전용 사이드바 ── */}
         <nav style={isMobile?{position:"fixed",left:12,right:12,bottom:10,height:66,background:UI.dark,border:"1px solid #1D2939",borderRadius:22,display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"space-around",padding:"6px",gap:6,overflow:"hidden",boxShadow:"0 14px 32px rgba(16,24,40,0.22)",zIndex:1000}:{width:96,background:UI.dark,borderRight:"1px solid #1D2939",borderRadius:20,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",padding:"12px 0",gap:6,overflow:"hidden",boxShadow:"0 10px 24px rgba(16,24,40,0.10)"}}>
-          {(isMobile?[
+          {(isMobile?([
             {id:"dashboard", icon:"🏠", label:"대시보드"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
-            {id:"booking", icon:"✚", label:"예약등록"},
-          ]:[
+            ...(isAdmin?[{id:"booking", icon:"✚", label:"예약등록"}]:[]),
+          ]):([
             {id:"dashboard", icon:"🏠", label:"대시보드"},
             {id:"schedule",  icon:"📅", label:"스케줄"},
-            {id:"notifications", icon:"🔔", label:"알림"},
-          ]).map(item=>{
+            ...(isAdmin?[{id:"notifications", icon:"🔔", label:"알림"}]:[]),
+          ])).map(item=>{
             const active=tab===item.id;
             return (
             <button key={item.id}
               style={{width:isMobile?"31%":78,height:isMobile?54:62,borderRadius:16,border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:isMobile?4:6,background:active?UI.primary:"transparent",position:"relative",transition:"all .15s ease"}}
-              onClick={()=>item.id==="booking"?setBookingModal("new"):setTab(item.id)}>
+              onClick={()=>item.id==="booking"?(isAdmin?setBookingModal("new"):setShowAdminLogin(true)):setTab(item.id)}>
               <span style={{fontSize:22}}>{item.icon}</span>
               <span style={{fontSize:12,color:active?"#fff":"#CBD5E1",fontWeight:active?900:700,whiteSpace:"nowrap"}}>{item.label}</span>
               {item.id==="notifications"&&unread>0&&<span style={{position:"absolute",top:6,right:6,width:6,height:6,borderRadius:"50%",background:"#E24B4A"}}></span>}
@@ -706,11 +815,11 @@ export default function App(){
                         })}
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
+                    {isAdmin&&<div style={{display:"flex",gap:6,flexShrink:0,overflowX:"visible",paddingBottom:0}}>
                       <button style={{...btnBlue,flexShrink:0}} onClick={()=>downloadSchedule(rows)}>⬇ 엑셀 다운로드</button>
                       <button style={{...btnGhost,flexShrink:0}} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>
                       <button style={{...btnPrimary,flexShrink:0}} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>
-                    </div>
+                    </div>}
                   </div>
                 )}
               </div>
@@ -718,10 +827,10 @@ export default function App(){
               {/* 주간 현황 영역 */}
               <div style={{display:"flex",flexDirection:"column",overflow:"visible",padding:isMobile?"4px 0 16px 0":"10px 16px 16px 0",gap:8,flexShrink:0,minHeight:isMobile?"60vh":undefined}}>
                 {isMobile ? (
-                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget}/>
+                  <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
                 ) : (
                   <div style={{...card,overflow:"auto",height:"calc(100vh - 238px)",minHeight:420,maxHeight:"calc(100vh - 238px)",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
-                    <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget}/>
+                    <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
                   </div>
                 )}
 
@@ -734,7 +843,7 @@ export default function App(){
                         <span key={i} style={{fontSize:11,color:"#791F1F",background:"#FCEBEB",padding:"2px 8px",borderRadius:20}}>{cf.studio} {cf.date} {cf.timeA}↔{cf.timeB}</span>
                       ))}
                     </div>
-                    <button style={{...btnR,height:24,fontSize:11,flexShrink:0}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>
+                    {isAdmin&&<button style={{...btnR,height:24,fontSize:11,flexShrink:0}} onClick={()=>{if(window.confirm("충돌 예약을 모두 취소하시겠습니까?"))cancelAllConflicts();}}>전체 취소</button>}
                   </div>
                 )}
               </div>
@@ -759,14 +868,14 @@ export default function App(){
                   {(filterStudio!=="전체"||filterGubun!=="전체"||filterDate)&&(
                     <button style={{...btn,height:34,fontSize:14,color:"#888"}} onClick={()=>{setFilterStudio("전체");setFilterGubun("전체");setFilterDate("");}}>✕ 초기화</button>
                   )}
-                  {!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
-                  {!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
-                  {!isMobile&&<button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>}
+                  {isAdmin&&!isMobile&&<button style={btnBlue} onClick={()=>downloadSchedule(filteredRows)}>⬇ 다운로드</button>}
+                  {isAdmin&&!isMobile&&<button style={btnGhost} onClick={()=>fileRef.current?.click()}>⬆ 엑셀 업로드</button>}
+                  {isAdmin&&!isMobile&&<button style={btnPrimary} onClick={()=>setBookingModal("new")}>✚ 예약 등록</button>}
                 </div>
               </div>
               <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
                 <table style={{width:"100%",minWidth:isMobile?1040:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
-                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태",...(isAdmin?["수정","취소"]:[])].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredRows.map((row,i)=>{
                       const realIdx=rows.indexOf(row);
@@ -785,12 +894,12 @@ export default function App(){
                           {td(row.강사명,{maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}{td(row.시작시간)}{td(row.종료시간)}{td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:isPrep?<span style={bd("gray")}>방송준비</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
-                          <td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
+                          {isAdmin&&<td style={{padding:"8px 8px",borderRight:`1px solid ${UI.softBorder}`,textAlign:"center"}}>
                             <button style={{...btn,height:28,padding:"0 10px",fontSize:isMobile?13:14,color:"#185FA5",borderColor:"#B5D4F4",fontWeight:800}} onClick={()=>setBookingModal(realIdx)}>수정</button>
-                          </td>
-                          <td style={{padding:"8px 8px",textAlign:"center"}}>
+                          </td>}
+                          {isAdmin&&<td style={{padding:"8px 8px",textAlign:"center"}}>
                             <button style={{...btnR,height:28,padding:"0 10px",fontSize:isMobile?13:14,fontWeight:800}} onClick={()=>setCancelTarget(realIdx)}>취소</button>
-                          </td>
+                          </td>}
                         </tr>
                       );
                     })}
@@ -799,7 +908,7 @@ export default function App(){
               </div>
             </div>
           )}
-          {tab==="notifications"&&(
+          {isAdmin&&tab==="notifications"&&(
             <>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                 <div style={{fontSize:14,fontWeight:600}}>알림</div>
