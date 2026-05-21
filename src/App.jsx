@@ -30,7 +30,7 @@ const DAYS=["월","화","수","목","금"];
 const HOURS=Array.from({length:12},(_,i)=>`${String(i+7).padStart(2,"0")}:00`);
 const DASHBOARD_SHELL_HEIGHT = "100dvh";
 const ADMIN_EMAILS = String(import.meta.env?.VITE_ADMIN_EMAILS || import.meta.env?.VITE_ADMIN_EMAIL || "").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean);
-const RESET_PASSWORD = import.meta.env?.VITE_RESET_PASSWORD || "ssafy-reset";
+const RESET_PASSWORD = import.meta.env?.VITE_RESET_PASSWORD || "ssafy";
 
 function excelDateToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(typeof val==="number"&&val>1000){const d=new Date(Math.round((val-25569)*86400*1000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;}return s;}
 function excelTimeToStr(val){if(!val&&val!==0)return "";const s=String(val).trim();if(/^\d{1,2}:\d{2}$/.test(s))return s.padStart(5,"0");if(typeof val==="number"&&val>=0&&val<1){const m=Math.round(val*24*60);return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;}return s;}
@@ -204,140 +204,111 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
   const conflictIdxs=new Set();
   conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
 
-  const studioIds=[...new Set(rows.map(r=>r.장소).filter(Boolean))];
-  const orderedStudioIds=[
-    ...STUDIOS.map(s=>s.id).filter(id=>studioIds.includes(id)),
-    ...studioIds.filter(id=>!STUDIOS.some(s=>s.id===id))
-  ];
-  const visibleStudios=(!activeStudios||activeStudios.size===0)
-    ?orderedStudioIds
-    :orderedStudioIds.filter(id=>activeStudios.has(id));
+  // 스튜디오 필터 적용 (activeStudios가 비어있으면 전체)
+  const displayRows=(!activeStudios||activeStudios.size===0)
+    ?rows
+    :rows.filter(r=>activeStudios.has(r.장소));
 
-  function getStudioDayRows(studio,date){
-    return rows.map((r,i)=>({...r,idx:i})).filter(r=>r.장소===studio&&r.날짜===date)
-      .sort((a,b)=>(toMin(a.시작시간)||0)-(toMin(b.시작시간)||0));
+  function getBlocksInHour(dayDate,hourStr){
+    const hMin=toMin(hourStr);
+    return displayRows.map((r,i)=>({...r,idx:rows.indexOf(r)})).filter(r=>{
+      if(r.날짜!==dayDate||!r.시작시간||!r.장소)return false;
+      const s=toMin(r.시작시간),e=toMin(r.종료시간);
+      if(s===null||e===null)return false;
+      return s<hMin+60&&e>hMin;
+    }).sort((a,b)=>toMin(a.시작시간)-toMin(b.시작시간));
   }
-  function compactTitle(row){
-    const content=row.내용||row.주제||"";
-    return content.includes(":")?content.split(":").pop().trim():content;
-  }
-  function titleFontSize(text){
-    const len=String(text||"").length;
-    if(len>38)return 10;
-    if(len>28)return 11;
-    return 12;
-  }
-  function renderScheduleCard(b,cardKey){
-    const isCf=conflictIdxs.has(b.idx);
-    const isPrep=isPrepBlock(b);
-    const color=isCf?UI.danger:isPrep?"#A6A6A6":getColor(b.장소);
-    const content=compactTitle(b)||"-";
-    return(
-      <div key={cardKey}
-        title={`${b.장소||""} ${content} ${b.시작시간||""}~${b.종료시간||""}`}
-        style={{
-          height:isPrep?26:64,
-          boxSizing:"border-box",
-          background:isCf?"#FFF5F5":isPrep?"#F7F7F5":`${color}10`,
-          border:`1px solid ${isCf?"#FDA29B":isPrep?"#E5E5E3":`${color}28`}`,
-          borderLeft:`4px solid ${color}`,
-          borderRadius:isPrep?8:12,
-          padding:isPrep?"4px 8px":"7px 9px",
-          cursor:"pointer",
-          overflow:"hidden",
-          boxShadow:"0 1px 2px rgba(16,24,40,0.04)",
-          transition:"all 0.15s ease"
-        }}
-        onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
-        onMouseEnter={e=>{e.currentTarget.style.filter="brightness(0.98)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=UI.shadowHover;}}
-        onMouseLeave={e=>{e.currentTarget.style.filter="none";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 1px 2px rgba(16,24,40,0.04)";}}
-      >
-        {isPrep?(
-          <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,height:"100%"}}>
-            <span style={{fontSize:10,fontWeight:900,color:"#9A9A9A",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>방송준비</span>
-            <span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:"#B8B8B8",whiteSpace:"nowrap"}}>{b.시작시간}~{b.종료시간}</span>
-          </div>
-        ):(
-          <>
-            {isCf&&<div style={{fontSize:9,color:UI.danger,fontWeight:900,lineHeight:1,marginBottom:2}}>⚠ 충돌</div>}
-            <div style={{fontSize:titleFontSize(content),fontWeight:900,color:UI.text,lineHeight:1.22,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{content}</div>
-            {b.주제&&b.내용&&b.주제!==b.내용&&(
-              <div style={{fontSize:10,color:UI.sub,lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:1}}>{b.주제}</div>
-            )}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,minWidth:0}}>
-              <span style={{fontSize:10,fontWeight:900,color,whiteSpace:"nowrap"}}>{b.시작시간} ~ {b.종료시간}</span>
-              {b.강사명&&<span style={{fontSize:10,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>👤 {b.강사명}</span>}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
   return(
     <div style={{position:"relative",width:"100%",minWidth:980,overflow:"visible"}} onClick={()=>setPopup(null)}>
       {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel} canManage={canManage}/>}
       <table style={{width:"100%",borderCollapse:"separate",borderSpacing:0,tableLayout:"fixed"}}>
         <thead>
           <tr>
-            <th style={{width:124,padding:"10px 8px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:900,color:UI.sub,textAlign:"center",position:"sticky",top:0,left:0,zIndex:30,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>스튜디오</th>
+            <th style={{width:74,padding:"6px 6px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:800,color:UI.sub,textAlign:"center",position:"sticky",top:0,left:0,zIndex:30,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>시간</th>
             {DAYS.map((day,di)=>{
               const isToday=fmtFull(new Date())===dayDates[di];
-              const cnt=visibleStudios.reduce((sum,studio)=>sum+getStudioDayRows(studio,dayDates[di]).filter(r=>!isPrepBlock(r)).length,0);
+              const cnt=displayRows.filter(r=>r.날짜===dayDates[di]&&r.장소).length;
               return(
-                <th key={day} style={{height:54,padding:"8px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center",position:"sticky",top:0,zIndex:25,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>
-                  <div style={{fontSize:14,fontWeight:900,color:isToday?"#175CD3":UI.text,whiteSpace:"nowrap"}}>{day}요일</div>
-                  <div style={{fontSize:11,color:isToday?"#175CD3":UI.sub,marginTop:3,fontWeight:800,whiteSpace:"nowrap"}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
+                <th key={day} style={{padding:"6px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center",position:"sticky",top:0,zIndex:25,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>
+                  <div style={{fontSize:14,fontWeight:900,color:isToday?"#175CD3":UI.text}}>{day}요일</div>
+                  <div style={{fontSize:11,color:isToday?"#175CD3":UI.sub,marginTop:3,fontWeight:700}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
                 </th>
               );
             })}
           </tr>
         </thead>
         <tbody>
-          {visibleStudios.length===0&&(
-            <tr><td colSpan={6} style={{height:180,textAlign:"center",color:UI.sub,fontSize:13,fontWeight:800}}>표시할 스튜디오 일정이 없습니다.</td></tr>
-          )}
-          {visibleStudios.map(studio=>{
-            const studioColor=getColor(studio);
-            const weeklyCount=dayDates.reduce((sum,date)=>sum+getStudioDayRows(studio,date).length,0);
-            return(
-              <tr key={studio} style={{height:164}}>
-                <td style={{height:164,padding:"10px 8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.border}`,background:UI.surface,position:"sticky",left:0,zIndex:3,verticalAlign:"top",boxSizing:"border-box"}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"center",justifyContent:"center",height:"100%",minWidth:0}}>
-                    <span style={{width:11,height:11,borderRadius:"50%",background:studioColor,boxShadow:`0 0 0 4px ${studioColor}18`}}></span>
-                    <span title={studio} style={{fontSize:12,fontWeight:900,color:studioColor,textAlign:"center",lineHeight:1.25,wordBreak:"keep-all",maxWidth:"100%",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{studio}</span>
-                    <span style={{fontSize:10,fontWeight:800,color:UI.sub}}>{weeklyCount}건</span>
-                  </div>
-                </td>
-                {DAYS.map((day,di)=>{
-                  const isToday=fmtFull(new Date())===dayDates[di];
-                  const dayRows=getStudioDayRows(studio,dayDates[di]);
-                  const prepRows=dayRows.filter(isPrepBlock);
-                  const liveRows=dayRows.filter(r=>!isPrepBlock(r));
-                  const cards=[...liveRows,...prepRows];
-                  const visibleCards=cards.slice(0,2);
-                  const hiddenCount=Math.max(0,cards.length-visibleCards.length);
-                  return(
-                    <td key={day} style={{height:164,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,background:isToday?"#FAFCFF":UI.surface,verticalAlign:"top",boxSizing:"border-box",overflow:"hidden"}}>
-                      {cards.length===0?(
-                        <div style={{height:"100%",borderRadius:12,background:"#F8FAFC",border:`1px dashed ${UI.softBorder}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#CBD5E1",fontSize:11,fontWeight:800}}>비어 있음</div>
-                      ):(
-                        <div style={{display:"flex",flexDirection:"column",gap:6,height:"100%",overflow:"hidden"}}>
-                          {visibleCards.map((b,i)=>renderScheduleCard(b,`${studio}-${day}-${i}`))}
-                          {hiddenCount>0&&(
-                            <button style={{height:24,borderRadius:8,border:`1px solid ${UI.border}`,background:"#fff",fontSize:10,fontWeight:900,color:UI.sub,cursor:"pointer"}}
-                              onClick={e=>{e.stopPropagation();const b=cards[2];if(b)setPopup({row:{...b,_moreList:cards},idx:b.idx,x:e.clientX,y:e.clientY});}}>
-                              + {hiddenCount}건 더 있음
-                            </button>
+          {HOURS.map((hour,hi)=>(
+            <tr key={hour}>
+              <td style={{padding:"3px 6px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.border}`,textAlign:"center",verticalAlign:"top",overflow:"visible",background:UI.surface,position:"sticky",left:0,zIndex:3}}>
+                <span style={{fontSize:11,fontWeight:800,color:UI.sub}}>{hour}</span>
+              </td>
+              {DAYS.map((day,di)=>{
+                const isToday=fmtFull(new Date())===dayDates[di];
+                const allBlocks=getBlocksInHour(dayDates[di],hour);
+                const hMin=toMin(hour);
+                const startBlocks=allBlocks.filter(b=>toMin(b.시작시간)>=hMin&&toMin(b.시작시간)<hMin+60);
+                const continueBlocks=allBlocks.filter(b=>toMin(b.시작시간)<hMin);
+                return(
+                  <td key={day} style={{padding:"3px 5px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",overflow:"visible",background:isToday?"#FAFCFF":UI.surface,minWidth:0}}>
+                    {allBlocks.length===0&&<div style={{height:4}}></div>}
+                    {continueBlocks.map((b,bi)=>{
+                      const isCf=conflictIdxs.has(b.idx);
+                      const isPrep=isPrepBlock(b);
+                      const color=isCf?"#E24B4A":isPrep?"#B8B8B8":getColor(b.장소);
+                      const content=b.내용||b.주제||"";
+                      return(
+                        <div key={`c${bi}`}
+                          style={{background:isPrep?"#F7F7F5":`${color}10`,borderRadius:isPrep?6:10,padding:isPrep?"2px 6px":"6px 8px",marginBottom:isPrep?2:4,cursor:"pointer",opacity:isPrep?0.72:0.9,border:`1px solid ${isPrep?"#E5E5E3":`${color}28`}`,borderLeft:`3px solid ${color}`}}
+                          onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}>
+                          {isPrep?(
+                            <div style={{fontSize:9,color:"#9A9A9A",fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>방송준비 · {b.장소}</div>
+                          ):(
+                            <>
+                              <div style={{fontSize:"clamp(10px, 0.78vw, 12px)",fontWeight:900,color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
+                              <div style={{fontSize:"clamp(10px, 0.82vw, 12px)",fontWeight:800,color:UI.text,lineHeight:1.22,whiteSpace:"normal",wordBreak:"keep-all"}}>{content||"-"}</div>
+                              <div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,marginTop:1,fontWeight:700}}>{b.시작시간} ~ {b.종료시간}</div>
+                              {b.강사명&&<div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:1}}>👤 {b.강사명}</div>}
+                            </>
                           )}
                         </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
+                      );
+                    })}
+                    {startBlocks.map((b,bi)=>{
+                      const isCf=conflictIdxs.has(b.idx);
+                      const isPrep=isPrepBlock(b);
+                      const color=isCf?"#E24B4A":isPrep?"#B8B8B8":getColor(b.장소);
+                      const bg=isCf?"#FFF5F5":isPrep?"#F7F7F5":`${color}10`;
+                      const content=b.내용||b.주제||"";
+                      return(
+                        <div key={bi}
+                          style={{background:bg,borderRadius:9,padding:"4px 7px",marginBottom:3,cursor:"pointer",transition:"all 0.15s ease",border:`1px solid ${color}25`,boxShadow:"0 1px 2px rgba(16,24,40,0.04)"}}
+                          onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
+                          onMouseEnter={e=>{e.currentTarget.style.filter="brightness(0.98)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=UI.shadowHover;}}
+                          onMouseLeave={e=>{e.currentTarget.style.filter="none";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 1px 2px rgba(16,24,40,0.04)";}}>
+                          {isCf&&<div style={{fontSize:9,color:"#E24B4A",fontWeight:600,marginBottom:2}}>⚠ 충돌</div>}
+                          {isPrep?(
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+                              <span style={{fontSize:9,color:"#9A9A9A",fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>방송준비</span>
+                              <span style={{fontSize:9,color:"#B8B8B8",fontWeight:700,whiteSpace:"nowrap"}}>{b.시작시간}~{b.종료시간}</span>
+                            </div>
+                          ):(
+                            <>
+                              <div style={{fontSize:"clamp(10px, 0.78vw, 12px)",fontWeight:900,color,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.장소}</div>
+                              <div style={{fontSize:"clamp(10px, 0.86vw, 13px)",fontWeight:900,color:UI.text,lineHeight:1.28,whiteSpace:"normal",wordBreak:"keep-all"}}>{content||"-"}</div>
+                              {b.주제&&b.내용&&b.주제!==b.내용&&<div style={{fontSize:"clamp(9px, 0.74vw, 11px)",color:UI.sub,lineHeight:1.25,marginTop:2,whiteSpace:"normal",wordBreak:"keep-all"}}>{b.주제}</div>}
+                              <div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,marginTop:3,fontWeight:800}}>{b.시작시간} ~ {b.종료시간}</div>
+                              {b.강사명&&<div style={{fontSize:"clamp(9px, 0.72vw, 11px)",color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}>👤 {b.강사명}</div>}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
