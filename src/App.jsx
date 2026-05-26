@@ -206,7 +206,13 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
   conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
 
   const baseStudios=STUDIOS.map(s=>s.id);
-  const extraStudios=[...new Set(rows.map(r=>r.장소).filter(Boolean).filter(s=>!baseStudios.includes(s)))];
+  const weekDateSet=new Set(dayDates);
+  // 기본 스튜디오는 항상 표시하되, 704호처럼 엑셀에 임시로 들어오는 추가 스튜디오는
+  // 선택된 주간에 실제 방송이 있을 때만 노출한다.
+  const extraStudios=[...new Set(rows
+    .filter(r=>r.장소&&!baseStudios.includes(r.장소)&&weekDateSet.has(r.날짜))
+    .map(r=>r.장소)
+  )];
   const visibleStudios=[...baseStudios,...extraStudios].filter(s=>!activeStudios||activeStudios.size===0||activeStudios.has(s));
   const displayRows=(!activeStudios||activeStudios.size===0)?rows:rows.filter(r=>activeStudios.has(r.장소));
 
@@ -226,21 +232,19 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
     return(
       <div
         style={{
-          height:prep?34:74,
-          minHeight:prep?34:74,
-          maxHeight:prep?34:74,
+          minHeight:prep?42:96,
           background:tone.bg,
           border:`1px solid ${tone.border}`,
           borderLeft:`4px solid ${tone.line}`,
           borderRadius:12,
-          padding:prep?"6px 8px":"8px 10px",
+          padding:prep?"7px 9px":"10px 12px",
           boxSizing:"border-box",
           cursor:"pointer",
-          overflow:"hidden",
+          overflow:"visible",
           display:"flex",
           flexDirection:"column",
-          justifyContent:prep?"center":"flex-start",
-          gap:3,
+          justifyContent:"flex-start",
+          gap:5,
           boxShadow:"0 1px 2px rgba(16,24,40,0.04)",
         }}
         onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
@@ -249,20 +253,23 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
         title={`${b.장소} · ${content} · ${b.시작시간}~${b.종료시간}`}
       >
         {prep?(
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,minWidth:0}}>
-            <span style={{fontSize:11,fontWeight:900,color:tone.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>방송준비</span>
-            <span style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap"}}>{b.시작시간}</span>
-          </div>
+          <>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,minWidth:0}}>
+              <span style={{fontSize:11,fontWeight:950,color:tone.text,whiteSpace:"nowrap"}}>방송준비</span>
+              <span style={{fontSize:10,fontWeight:850,color:UI.sub,whiteSpace:"nowrap"}}>{b.시작시간} ~ {b.종료시간}</span>
+            </div>
+            <div style={{fontSize:11,fontWeight:800,color:UI.sub,lineHeight:1.35,wordBreak:"keep-all"}}>{content}</div>
+          </>
         ):(
           <>
-            <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flexWrap:"wrap"}}>
               {isCf&&<span style={{fontSize:10,fontWeight:900,color:"#B42318",flexShrink:0}}>⚠</span>}
-              <span style={{fontSize:11,fontWeight:900,color:tone.text,whiteSpace:"nowrap",flexShrink:0}}>{b.구분||"기타"}</span>
-              <span style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.시작시간} ~ {b.종료시간}</span>
+              <span style={{fontSize:11,fontWeight:950,color:tone.text,whiteSpace:"nowrap",flexShrink:0}}>{b.구분||"기타"}</span>
+              <span style={{fontSize:11,fontWeight:850,color:UI.sub,whiteSpace:"nowrap"}}>{b.시작시간} ~ {b.종료시간}</span>
             </div>
-            <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,lineHeight:1.25,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{content}</div>
-            {sub&&<div style={{fontSize:10,color:UI.sub,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{sub}</div>}
-            {b.강사명&&<div style={{fontSize:10,color:UI.sub,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:"auto"}}>👤 {b.강사명}</div>}
+            <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,lineHeight:1.35,whiteSpace:"normal",overflow:"visible",wordBreak:"keep-all"}}>{content}</div>
+            {sub&&<div style={{fontSize:11,color:UI.sub,fontWeight:750,lineHeight:1.35,whiteSpace:"normal",wordBreak:"keep-all"}}>{sub}</div>}
+            <div style={{fontSize:11,color:UI.sub,fontWeight:800,lineHeight:1.35,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>👤 {b.강사명||"강사 미정"}</div>
           </>
         )}
       </div>
@@ -304,11 +311,11 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
                   const isToday=fmtFull(new Date())===dayDates[di];
                   const blocks=getStudioDayRows(studio,dayDates[di]);
                   return(
-                    <td key={day} style={{height:158,maxHeight:158,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",background:isToday?"#FAFCFF":UI.surface,overflow:"hidden"}}>
+                    <td key={day} style={{minHeight:142,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",background:isToday?"#FAFCFF":UI.surface,overflow:"visible"}}>
                       {blocks.length===0?(
-                        <div style={{height:"100%",border:"1px dashed #E4E7EC",borderRadius:12,background:"#F9FAFB",display:"flex",alignItems:"center",justifyContent:"center",color:UI.mute,fontSize:11,fontWeight:800}}>비어 있음</div>
+                        <div style={{minHeight:116,border:"1px dashed #E4E7EC",borderRadius:12,background:"#F9FAFB",display:"flex",alignItems:"center",justifyContent:"center",color:UI.mute,fontSize:11,fontWeight:800}}>비어 있음</div>
                       ):(
-                        <div style={{height:"100%",display:"flex",flexDirection:"column",gap:6,overflowY:"auto",paddingRight:2}}>
+                        <div style={{minHeight:116,display:"flex",flexDirection:"column",gap:7,overflow:"visible",paddingRight:0}}>
                           {blocks.map((b,bi)=><ScheduleMiniCard key={`${b.idx}-${bi}`} b={b}/>) }
                         </div>
                       )}
