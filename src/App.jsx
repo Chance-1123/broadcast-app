@@ -89,6 +89,7 @@ function BookingForm({initial,onSave,onClose,title}){
   const [customStudio,setCustomStudio]=useState(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)?initial.장소:"");
   const [useCustom,setUseCustom]=useState(!!(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)));
   const [err,setErr]=useState("");
+  const datePickerRef=useRef(null);
   function set(k,v){let value=k==="날짜"?normalizeDateInput(v):v;let u={...form,[k]:value};if(k==="날짜"&&value){u.요일=weekdayFromDateStr(value);}setForm(u);}
   function openNativePicker(e){try{e.currentTarget.showPicker?.();}catch(_){/* 일부 브라우저는 사용자 제스처 외 showPicker를 제한 */}}
   function handleDateChange(e){set("날짜",e.target.value);}
@@ -143,7 +144,32 @@ function BookingForm({initial,onSave,onClose,title}){
               ))}
             </div>
           </div>
-          <div><span style={lbl}>날짜 *</span><input type="text" inputMode="numeric" style={inp} placeholder="예: 20260602 또는 2026-06-02" value={form.날짜} onChange={handleDateChange} onBlur={handleDateBlur}/>{form.요일&&<div style={{fontSize:16,color:"#1D9E75",marginTop:3}}>{form.요일}요일</div>}</div>
+          <div><span style={lbl}>날짜 *</span>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <input type="text" inputMode="numeric" style={{...inp,flex:1}} placeholder="예: 20260602 또는 2026-06-02" value={form.날짜} onChange={handleDateChange} onBlur={handleDateBlur}/>
+              <button
+                type="button"
+                aria-label="캘린더로 날짜 선택"
+                title="캘린더로 날짜 선택"
+                style={{...btn,width:46,height:32,padding:0,justifyContent:"center",fontSize:17,flexShrink:0,position:"relative"}}
+                onClick={()=>{try{datePickerRef.current?.showPicker?.();}catch(_){datePickerRef.current?.click?.();}}}
+              >
+                📅
+                <input
+                  ref={datePickerRef}
+                  type="date"
+                  tabIndex={-1}
+                  style={{position:"absolute",inset:0,opacity:0,pointerEvents:"none"}}
+                  value={/^\d{4}-\d{2}-\d{2}$/.test(form.날짜)?form.날짜:""}
+                  onChange={e=>set("날짜",e.target.value)}
+                />
+              </button>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
+              <span style={{fontSize:12,color:"#888"}}>숫자 8자리 입력 또는 캘린더 선택 가능</span>
+              {form.요일&&<span style={{fontSize:16,color:"#1D9E75",fontWeight:700}}>{form.요일}요일</span>}
+            </div>
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><span style={lbl}>시작 시간 *</span><input type="time" style={inp} value={form.시작시간} onClick={openNativePicker} onFocus={openNativePicker} onChange={e=>set("시작시간",e.target.value)}/></div>
             <div><span style={lbl}>종료 시간 *</span><input type="time" style={inp} value={form.종료시간} onClick={openNativePicker} onFocus={openNativePicker} onChange={e=>set("종료시간",e.target.value)}/></div>
@@ -322,6 +348,26 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
                       ):(
                         <div style={{minHeight:116,display:"flex",flexDirection:"column",gap:7,overflow:"visible",paddingRight:0}}>
                           {blocks.map((b,bi)=><ScheduleMiniCard key={`${b.idx}-${bi}`} b={b}/>) }
+                          {canManage&&(
+                            <button
+                              type="button"
+                              title={`${studio} · ${dayDates[di]} 추가 예약`}
+                              style={{
+                                minHeight:34,
+                                border:"1px dashed #C7D7FE",
+                                borderRadius:10,
+                                background:"#F8FAFF",
+                                color:"#175CD3",
+                                fontSize:12,
+                                fontWeight:900,
+                                cursor:"pointer",
+                                marginTop:2,
+                              }}
+                              onClick={e=>{e.stopPropagation();onEmptySlot?.(studio,dayDates[di]);}}
+                            >
+                              ＋ 추가 예약
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
