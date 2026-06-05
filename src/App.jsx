@@ -41,6 +41,8 @@ function getThisWeekMonday(){const d=new Date();const dow=d.getDay()||7;d.setDat
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function fmtShort(d){return `${d.getMonth()+1}/${d.getDate()}`;}
 function fmtFull(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function weekdayFromDateStr(v){const d=new Date(v);return isNaN(d.getTime())?"": ["일","월","화","수","목","금","토"][d.getDay()];}
+function normalizeDateInput(v){const raw=String(v||"").trim();const digits=raw.replace(/\D/g,"");if(/^\d{8}$/.test(digits)){return `${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}`;}return raw;}
 function getColor(id){return STUDIOS.find(s=>s.id===id)?.color||"#888";}
 function isPrepBlock(row){return row?.내용==="방송준비"||row?.구분==="방송준비"||row?.주제==="방송준비";}
 function detectConflicts(rows){const res=[];for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i],b=rows[j];if(!a.장소||a.장소!==b.장소||a.날짜!==b.날짜)continue;const aS=toMin(a.시작시간),aE=toMin(a.종료시간),bS=toMin(b.시작시간),bE=toMin(b.종료시간);if(aS!==null&&aE!==null&&bS!==null&&bE!==null&&aS<bE&&bS<aE)res.push({a:i,b:j,studio:a.장소,date:a.날짜,timeA:`${a.시작시간}~${a.종료시간}`,timeB:`${b.시작시간}~${b.종료시간}`});}return res;}
@@ -87,7 +89,10 @@ function BookingForm({initial,onSave,onClose,title}){
   const [customStudio,setCustomStudio]=useState(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)?initial.장소:"");
   const [useCustom,setUseCustom]=useState(!!(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)));
   const [err,setErr]=useState("");
-  function set(k,v){let u={...form,[k]:v};if(k==="날짜"&&v){const d=new Date(v);u.요일=["일","월","화","수","목","금","토"][d.getDay()];}setForm(u);}
+  function set(k,v){let value=k==="날짜"?normalizeDateInput(v):v;let u={...form,[k]:value};if(k==="날짜"&&value){u.요일=weekdayFromDateStr(value);}setForm(u);}
+  function openNativePicker(e){try{e.currentTarget.showPicker?.();}catch(_){/* 일부 브라우저는 사용자 제스처 외 showPicker를 제한 */}}
+  function handleDateChange(e){set("날짜",e.target.value);}
+  function handleDateBlur(e){set("날짜",normalizeDateInput(e.target.value));}
   const len=calcLen(form.시작시간,form.종료시간);
   function save(){
     const 장소=useCustom?customStudio.trim():form.장소;
@@ -138,10 +143,10 @@ function BookingForm({initial,onSave,onClose,title}){
               ))}
             </div>
           </div>
-          <div><span style={lbl}>날짜 *</span><input type="date" style={inp} value={form.날짜} onChange={e=>set("날짜",e.target.value)}/>{form.요일&&<div style={{fontSize:16,color:"#1D9E75",marginTop:3}}>{form.요일}요일</div>}</div>
+          <div><span style={lbl}>날짜 *</span><input type="text" inputMode="numeric" style={inp} placeholder="예: 20260602 또는 2026-06-02" value={form.날짜} onChange={handleDateChange} onBlur={handleDateBlur}/>{form.요일&&<div style={{fontSize:16,color:"#1D9E75",marginTop:3}}>{form.요일}요일</div>}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <div><span style={lbl}>시작 시간 *</span><input type="time" style={inp} value={form.시작시간} onChange={e=>set("시작시간",e.target.value)}/></div>
-            <div><span style={lbl}>종료 시간 *</span><input type="time" style={inp} value={form.종료시간} onChange={e=>set("종료시간",e.target.value)}/></div>
+            <div><span style={lbl}>시작 시간 *</span><input type="time" style={inp} value={form.시작시간} onClick={openNativePicker} onFocus={openNativePicker} onChange={e=>set("시작시간",e.target.value)}/></div>
+            <div><span style={lbl}>종료 시간 *</span><input type="time" style={inp} value={form.종료시간} onClick={openNativePicker} onFocus={openNativePicker} onChange={e=>set("종료시간",e.target.value)}/></div>
           </div>
           {len&&<div style={{fontSize:13,color:"#1D9E75",fontWeight:500}}>⏱ 총 {len}</div>}
           <div><span style={lbl}>주제</span><input type="text" style={inp} placeholder="예: 코딩 Live Django트랙" value={form.주제} onChange={e=>set("주제",e.target.value)}/></div>
@@ -199,7 +204,7 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
   );
 }
 
-function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canManage=false}){
+function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmptySlot,canManage=false}){
   const [popup,setPopup]=useState(null);
   const dayDates=DAYS.map((_,i)=>fmtFull(addDays(monday,i)));
   const conflictIdxs=new Set();
@@ -311,9 +316,9 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,canMana
                   const isToday=fmtFull(new Date())===dayDates[di];
                   const blocks=getStudioDayRows(studio,dayDates[di]);
                   return(
-                    <td key={day} style={{minHeight:142,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",background:isToday?"#FAFCFF":UI.surface,overflow:"visible"}}>
+                    <td key={day} onClick={()=>{if(canManage)onEmptySlot?.(studio,dayDates[di]);}} title={canManage?`${studio} · ${dayDates[di]} 예약 등록`:undefined} style={{minHeight:142,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",background:isToday?"#FAFCFF":UI.surface,overflow:"visible",cursor:canManage?"pointer":"default"}}>
                       {blocks.length===0?(
-                        <div style={{minHeight:116,border:"1px dashed #E4E7EC",borderRadius:12,background:"#F9FAFB",display:"flex",alignItems:"center",justifyContent:"center",color:UI.mute,fontSize:11,fontWeight:800}}>비어 있음</div>
+                        <div style={{minHeight:116,border:"1px dashed #E4E7EC",borderRadius:12,background:"#F9FAFB",display:"flex",alignItems:"center",justifyContent:"center",color:UI.mute,fontSize:11,fontWeight:800,cursor:canManage?"pointer":"default"}}>비어 있음</div>
                       ):(
                         <div style={{minHeight:116,display:"flex",flexDirection:"column",gap:7,overflow:"visible",paddingRight:0}}>
                           {blocks.map((b,bi)=><ScheduleMiniCard key={`${b.idx}-${bi}`} b={b}/>) }
@@ -711,11 +716,15 @@ export default function App(){
   const filteredByStudio=activeStudios.size===0?rows:rows.filter(r=>activeStudios.has(r.장소));
   // 구분값 목록
   const gubunList=["전체","1학기","2학기","취업","기획","기타"];
+  function openEmptySlotBooking(studio,date){
+    if(!requireAdmin("예약 등록"))return;
+    setBookingModal({mode:"new",initial:{장소:studio,날짜:date,요일:weekdayFromDateStr(date),구분:"1학기",주제:"",내용:"",강사명:"",시작시간:"09:00",종료시간:"18:00",길이:""}});
+  }
 
   return(
     <div style={{display:"flex",flexDirection:"column",width:"100vw",height:DASHBOARD_SHELL_HEIGHT,maxWidth:"100vw",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:isMobile?13:14,background:UI.bg,color:UI.text,overflow:"hidden",boxSizing:"border-box"}}>
       {showAdminLogin&&<AdminLoginModal onClose={()=>setShowAdminLogin(false)} onLogin={handleAdminLogin}/>}
-      {isAdmin&&bookingModal==="new"&&<BookingForm title="예약 등록" initial={null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
+      {isAdmin&&(bookingModal==="new"||bookingModal?.mode==="new")&&<BookingForm title="예약 등록" initial={bookingModal?.initial||null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
       {isAdmin&&typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
       {isAdmin&&cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
       <style>{`html, body, #root { width: 100%; height: 100%; margin: 0; } body { overflow: hidden; } * { box-sizing: border-box; } *::-webkit-scrollbar { width: 8px; height: 8px; } *::-webkit-scrollbar-thumb { background: #D0D5DD; border-radius: 999px; } *::-webkit-scrollbar-track { background: transparent; }`}</style>
@@ -861,7 +870,7 @@ export default function App(){
                   <MobileAgendaView rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} mode={mobileAgendaMode} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
                 ) : (
                   <div style={{...card,overflow:"auto",height:"calc(100vh - 238px)",minHeight:420,maxHeight:"calc(100vh - 238px)",flexShrink:0,WebkitOverflowScrolling:"touch"}}>
-                    <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget} canManage={isAdmin}/>
+                    <WeeklyGrid rows={rows} activeStudios={activeStudios} conflicts={conflicts} monday={monday} onEdit={setBookingModal} onCancel={setCancelTarget} onEmptySlot={openEmptySlotBooking} canManage={isAdmin}/>
                   </div>
                 )}
 
