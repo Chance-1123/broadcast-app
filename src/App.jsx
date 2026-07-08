@@ -236,151 +236,147 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
   const conflictIdxs=new Set();
   conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
 
-  const baseStudios=STUDIOS.map(s=>s.id);
   const weekDateSet=new Set(dayDates);
-  // 기본 스튜디오는 항상 표시하되, 704호처럼 엑셀에 임시로 들어오는 추가 스튜디오는
-  // 선택된 주간에 실제 방송이 있을 때만 노출한다.
+  const baseStudios=STUDIOS.map(s=>s.id);
   const extraStudios=[...new Set(rows
     .filter(r=>r.장소&&!baseStudios.includes(r.장소)&&weekDateSet.has(r.날짜))
     .map(r=>r.장소)
   )];
-  const visibleStudios=[...baseStudios,...extraStudios].filter(s=>!activeStudios||activeStudios.size===0||activeStudios.has(s));
-  const displayRows=(!activeStudios||activeStudios.size===0)?rows:rows.filter(r=>activeStudios.has(r.장소));
+  const visibleStudios=[...baseStudios,...extraStudios]
+    .filter(s=>!activeStudios||activeStudios.size===0||activeStudios.has(s));
 
-  function getStudioDayRows(studio, dayDate){
-    return displayRows.map((r,i)=>({...r,idx:rows.indexOf(r)}))
-      .filter(r=>r.장소===studio&&r.날짜===dayDate)
+  const startHour=8;
+  const endHour=21;
+  const pxPerHour=64;
+  const timeRows=Array.from({length:endHour-startHour+1},(_,i)=>`${String(startHour+i).padStart(2,"0")}:00`);
+  const totalTimeHeight=(endHour-startHour)*pxPerHour;
+  const pxPerMin=pxPerHour/60;
+  const studioColWidth=96;
+  const timeColWidth=64;
+  const headerDayH=42;
+  const headerStudioH=32;
+
+  const displayRows=(!activeStudios||activeStudios.size===0)?rows:rows.filter(r=>activeStudios.has(r.장소));
+  const indexedRows=displayRows.map(r=>({...r,idx:rows.indexOf(r)}));
+
+  function rowsFor(dayDate,studio){
+    return indexedRows
+      .filter(r=>r.날짜===dayDate&&r.장소===studio)
       .sort((a,b)=>(toMin(a.시작시간)||0)-(toMin(b.시작시간)||0));
   }
 
-  function ScheduleMiniCard({b}){
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function eventStyle(row){
+    const s=toMin(row.시작시간);
+    const e=toMin(row.종료시간);
+    const minStart=startHour*60;
+    const maxEnd=endHour*60;
+    const top=clamp(((s??minStart)-minStart)*pxPerMin,0,totalTimeHeight-28);
+    const bottom=clamp(((e??(s??minStart)+60)-minStart)*pxPerMin,0,totalTimeHeight);
+    const h=Math.max(38,bottom-top-4);
+    return {top, height:h};
+  }
+
+  function ScheduleBlock({b}){
     const isCf=conflictIdxs.has(b.idx);
     const tone=isCf?{bg:"#FFF1F3",text:"#B42318",border:"#FDA29B",line:"#F04438"}:getGubunTone(b.구분,b);
     const prep=isPrepBlock(b);
     const content=(b.내용||b.주제||"-").trim();
     const sub=(b.주제&&b.내용&&b.주제!==b.내용?b.주제:"").trim();
-    const titleFont=content.length>28?11:content.length>18?12:13;
+    const pos=eventStyle(b);
+    const titleFont=content.length>22?10:content.length>14?11:12;
     return(
       <div
         style={{
-          minHeight:prep?42:96,
-          background:tone.bg,
+          position:"absolute",
+          left:6,
+          right:6,
+          top:pos.top,
+          height:pos.height,
+          borderRadius:10,
           border:`1px solid ${tone.border}`,
-          borderLeft:`4px solid ${tone.line}`,
-          borderRadius:12,
-          padding:prep?"7px 9px":"10px 12px",
+          borderLeft:`3px solid ${tone.line}`,
+          background:tone.bg,
+          padding:"6px 7px",
           boxSizing:"border-box",
+          overflow:"hidden",
+          zIndex:8,
           cursor:"pointer",
-          overflow:"visible",
-          display:"flex",
-          flexDirection:"column",
-          justifyContent:"flex-start",
-          gap:5,
-          boxShadow:"0 1px 2px rgba(16,24,40,0.04)",
+          boxShadow:"0 2px 5px rgba(16,24,40,0.06)",
+          transition:"transform .12s ease, box-shadow .12s ease",
         }}
+        title={`${b.장소} · ${content} · ${b.시작시간}~${b.종료시간}${b.강사명?` · ${b.강사명}`:""}`}
         onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
         onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=UI.shadowHover;}}
-        onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 1px 2px rgba(16,24,40,0.04)";}}
-        title={`${b.장소} · ${content} · ${b.시작시간}~${b.종료시간}`}
+        onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 5px rgba(16,24,40,0.06)";}}
       >
-        {prep?(
-          <>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,minWidth:0}}>
-              <span style={{fontSize:11,fontWeight:950,color:tone.text,whiteSpace:"nowrap"}}>방송준비</span>
-              <span style={{fontSize:10,fontWeight:850,color:UI.sub,whiteSpace:"nowrap"}}>{b.시작시간} ~ {b.종료시간}</span>
-            </div>
-            <div style={{fontSize:11,fontWeight:800,color:UI.sub,lineHeight:1.35,wordBreak:"keep-all"}}>{content}</div>
-          </>
-        ):(
-          <>
-            <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flexWrap:"wrap"}}>
-              {isCf&&<span style={{fontSize:10,fontWeight:900,color:"#B42318",flexShrink:0}}>⚠</span>}
-              <span style={{fontSize:11,fontWeight:950,color:tone.text,whiteSpace:"nowrap",flexShrink:0}}>{b.구분||"기타"}</span>
-              <span style={{fontSize:11,fontWeight:850,color:UI.sub,whiteSpace:"nowrap"}}>{b.시작시간} ~ {b.종료시간}</span>
-            </div>
-            <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,lineHeight:1.35,whiteSpace:"normal",overflow:"visible",wordBreak:"keep-all"}}>{content}</div>
-            {sub&&<div style={{fontSize:11,color:UI.sub,fontWeight:750,lineHeight:1.35,whiteSpace:"normal",wordBreak:"keep-all"}}>{sub}</div>}
-            <div style={{fontSize:11,color:UI.sub,fontWeight:800,lineHeight:1.35,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>👤 {b.강사명||"강사 미정"}</div>
-          </>
-        )}
+        <div style={{fontSize:10,fontWeight:950,color:tone.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.25}}>
+          {isCf&&"⚠ "}{prep?"방송준비":(b.구분||"기타")}
+        </div>
+        <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>{content}</div>
+        {pos.height>=58&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>{b.시작시간} ~ {b.종료시간}</div>}
+        {pos.height>=74&&b.강사명&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>👤 {b.강사명}</div>}
+        {pos.height>=92&&sub&&<div style={{fontSize:9,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>{sub}</div>}
       </div>
     );
   }
 
   return(
-    <div style={{position:"relative",width:"100%",minWidth:1040,overflow:"visible"}} onClick={()=>setPopup(null)}>
+    <div style={{position:"relative",width:"100%",minWidth:timeColWidth+DAYS.length*visibleStudios.length*studioColWidth,overflow:"visible"}} onClick={()=>setPopup(null)}>
       {popup&&<BlockPopup row={popup.row} idx={popup.idx} pos={{x:popup.x,y:popup.y}} onClose={()=>setPopup(null)} onEdit={onEdit} onCancel={onCancel} canManage={canManage}/>}      
-      <table style={{width:"100%",borderCollapse:"separate",borderSpacing:0,tableLayout:"fixed"}}>
-        <thead>
-          <tr>
-            <th style={{width:138,padding:"10px 8px",background:UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,fontSize:12,fontWeight:900,color:UI.sub,textAlign:"center",position:"sticky",top:0,left:0,zIndex:30,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>스튜디오</th>
-            {DAYS.map((day,di)=>{
-              const isToday=fmtFull(new Date())===dayDates[di];
-              const cnt=displayRows.filter(r=>r.날짜===dayDates[di]&&r.장소).length;
-              return(
-                <th key={day} style={{padding:"10px 6px",background:isToday?"#F0F7FF":UI.surface,borderBottom:`2px solid ${isToday?"#378ADD":UI.border}`,borderRight:`1px solid ${UI.softBorder}`,textAlign:"center",position:"sticky",top:0,zIndex:25,boxShadow:"0 2px 0 rgba(16,24,40,0.04)"}}>
-                  <div style={{fontSize:14,fontWeight:950,color:isToday?"#175CD3":UI.text}}>{day}요일</div>
-                  <div style={{fontSize:11,color:isToday?"#175CD3":UI.sub,marginTop:3,fontWeight:800}}>{fmtShort(addDays(monday,di))} ({cnt}건)</div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {visibleStudios.map((studio)=>{
-            const studioColor=getColor(studio);
-            return(
-              <tr key={studio}>
-                <td style={{padding:"10px 8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.border}`,background:UI.surface,position:"sticky",left:0,zIndex:3,verticalAlign:"top"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                    <span style={{width:9,height:9,borderRadius:"50%",background:studioColor,flexShrink:0}}></span>
-                    <span style={{fontSize:13,fontWeight:950,color:studioColor,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studio}</span>
-                  </div>
-                  <div style={{fontSize:10,color:UI.mute,fontWeight:700,marginTop:4}}>월~금 라인업</div>
-                </td>
-                {DAYS.map((day,di)=>{
-                  const isToday=fmtFull(new Date())===dayDates[di];
-                  const blocks=getStudioDayRows(studio,dayDates[di]);
-                  return(
-                    <td key={day} onClick={()=>{if(canManage)onEmptySlot?.(studio,dayDates[di]);}} title={canManage?`${studio} · ${dayDates[di]} 예약 등록`:undefined} style={{minHeight:142,padding:"8px",borderBottom:`1px solid ${UI.softBorder}`,borderRight:`1px solid ${UI.softBorder}`,verticalAlign:"top",background:isToday?"#FAFCFF":UI.surface,overflow:"visible",cursor:canManage?"pointer":"default"}}>
-                      {blocks.length===0?(
-                        <div style={{minHeight:116,border:"1px dashed #E4E7EC",borderRadius:12,background:"#F9FAFB",display:"flex",alignItems:"center",justifyContent:"center",color:UI.mute,fontSize:11,fontWeight:800,cursor:canManage?"pointer":"default"}}>비어 있음</div>
-                      ):(
-                        <div style={{minHeight:116,display:"flex",flexDirection:"column",gap:7,overflow:"visible",paddingRight:0}}>
-                          {blocks.map((b,bi)=><ScheduleMiniCard key={`${b.idx}-${bi}`} b={b}/>) }
-                          {canManage&&(
-                            <button
-                              type="button"
-                              title={`${studio} · ${dayDates[di]} 추가 예약`}
-                              style={{
-                                minHeight:34,
-                                border:"1px dashed #C7D7FE",
-                                borderRadius:10,
-                                background:"#F8FAFF",
-                                color:"#175CD3",
-                                fontSize:12,
-                                fontWeight:900,
-                                cursor:"pointer",
-                                marginTop:2,
-                              }}
-                              onClick={e=>{e.stopPropagation();onEmptySlot?.(studio,dayDates[di]);}}
-                            >
-                              ＋ 추가 예약
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:`${timeColWidth}px repeat(${DAYS.length*visibleStudios.length}, ${studioColWidth}px)`,
+        gridTemplateRows:`${headerDayH}px ${headerStudioH}px repeat(${timeRows.length}, ${pxPerHour}px)`,
+        background:UI.surface,
+        border:`1px solid ${UI.border}`,
+        borderRadius:14,
+        overflow:"visible",
+        position:"relative",
+      }}>
+        <div style={{gridColumn:"1 / 2",gridRow:"1 / 3",position:"sticky",left:0,top:0,zIndex:45,background:UI.surface,borderRight:`1px solid ${UI.border}`,borderBottom:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:UI.sub}}>시간</div>
+        {DAYS.map((day,di)=>{
+          const isToday=fmtFull(new Date())===dayDates[di];
+          const startCol=2+di*visibleStudios.length;
+          const endCol=startCol+visibleStudios.length;
+          return(
+            <div key={day} style={{gridColumn:`${startCol} / ${endCol}`,gridRow:"1 / 2",position:"sticky",top:0,zIndex:35,background:isToday?"#F0F7FF":UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:14,fontWeight:950,color:isToday?"#175CD3":UI.text}}>{fmtShort(addDays(monday,di))} ({day})</div>
+              <div style={{fontSize:10,fontWeight:800,color:isToday?"#175CD3":UI.sub}}>{indexedRows.filter(r=>r.날짜===dayDates[di]).length}건</div>
+            </div>
+          );
+        })}
+        {DAYS.map((day,di)=>visibleStudios.map((studio,si)=>{
+          const col=2+di*visibleStudios.length+si;
+          const color=getColor(studio);
+          return(
+            <div key={`${day}-${studio}`} style={{gridColumn:`${col} / ${col+1}`,gridRow:"2 / 3",position:"sticky",top:headerDayH,zIndex:34,background:UI.surface,borderRight:`1px solid ${UI.softBorder}`,borderBottom:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px",boxSizing:"border-box"}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:color,marginRight:4,flexShrink:0}}></span>
+              <span style={{fontSize:10,fontWeight:900,color:color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studio}</span>
+            </div>
+          );
+        }))}
+        {timeRows.map((t,hi)=>(
+          <div key={t} style={{gridColumn:"1 / 2",gridRow:`${3+hi} / ${4+hi}`,position:"sticky",left:0,zIndex:20,background:"#F8FAFC",borderRight:`1px solid ${UI.border}`,borderBottom:`1px solid ${UI.softBorder}`,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:10,boxSizing:"border-box",fontSize:12,fontWeight:800,color:"#667085"}}>{t}</div>
+        ))}
+        {DAYS.map((day,di)=>visibleStudios.map((studio,si)=>{
+          const col=2+di*visibleStudios.length+si;
+          const blocks=rowsFor(dayDates[di],studio);
+          const isToday=fmtFull(new Date())===dayDates[di];
+          return(
+            <div key={`col-${day}-${studio}`} style={{gridColumn:`${col} / ${col+1}`,gridRow:`3 / ${3+timeRows.length}`,position:"relative",height:totalTimeHeight,background:isToday?"#FBFDFF":UI.surface,borderRight:`1px solid ${UI.softBorder}`,overflow:"hidden"}}>
+              {timeRows.slice(0,-1).map((t,hi)=>(
+                <div key={t} onClick={()=>{if(canManage)onEmptySlot?.(studio,dayDates[di],t);}} title={canManage?`${studio} · ${dayDates[di]} ${t} 예약 등록`:undefined} style={{position:"absolute",left:0,right:0,top:hi*pxPerHour,height:pxPerHour,borderBottom:`1px solid ${UI.softBorder}`,cursor:canManage?"pointer":"default"}} />
+              ))}
+              {blocks.map((b,bi)=><ScheduleBlock key={`${b.idx}-${bi}`} b={b}/>) }
+            </div>
+          );
+        }))}
+      </div>
     </div>
   );
 }
+
 function LiveBanner({rows, onMore, compact=false}){
   const [rollIdx,setRollIdx]=useState(0);
   const now=new Date();
@@ -780,9 +776,11 @@ export default function App(){
   const filteredByStudio=activeStudios.size===0?rows:rows.filter(r=>activeStudios.has(r.장소));
   // 구분값 목록
   const gubunList=["전체","1학기","2학기","취업","기획","기타"];
-  function openEmptySlotBooking(studio,date){
+  function openEmptySlotBooking(studio,date,startTime="09:00"){
     if(!requireAdmin("예약 등록"))return;
-    setBookingModal({mode:"new",initial:{장소:studio,날짜:date,요일:weekdayFromDateStr(date),구분:"1학기",주제:"",내용:"",강사명:"",시작시간:"09:00",종료시간:"18:00",길이:""}});
+    const sMin=toMin(startTime);
+    const endTime=sMin!==null?`${String(Math.floor((sMin+60)/60)).padStart(2,"0")}:${String((sMin+60)%60).padStart(2,"0")}`:"10:00";
+    setBookingModal({mode:"new",initial:{장소:studio,날짜:date,요일:weekdayFromDateStr(date),구분:"1학기",주제:"",내용:"",강사명:"",시작시간:startTime,종료시간:endTime,길이:""}});
   }
 
   return(
