@@ -232,6 +232,7 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
 
 function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmptySlot,canManage=false}){
   const [popup,setPopup]=useState(null);
+  const todayHeaderRef=useRef(null);
   const dayDates=DAYS.map((_,i)=>fmtFull(addDays(monday,i)));
   const conflictIdxs=new Set();
   conflicts.forEach(c=>{conflictIdxs.add(c.a);conflictIdxs.add(c.b);});
@@ -255,6 +256,20 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
   const timeColWidth=64;
   const headerDayH=42;
   const headerStudioH=32;
+  const now=new Date();
+  const todayStr=fmtFull(now);
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const showNowLine=nowMin>=startHour*60&&nowMin<=endHour*60;
+  const nowLineTop=clamp((nowMin-startHour*60)*pxPerMin,0,totalTimeHeight);
+
+  useEffect(()=>{
+    if(!todayHeaderRef.current)return;
+    const t=setTimeout(()=>{
+      try{todayHeaderRef.current.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});}
+      catch(e){todayHeaderRef.current.scrollIntoView();}
+    },120);
+    return()=>clearTimeout(t);
+  },[monday,visibleStudios.length]);
 
   const displayRows=(!activeStudios||activeStudios.size===0)?rows:rows.filter(r=>activeStudios.has(r.장소));
   const indexedRows=displayRows.map(r=>({...r,idx:rows.indexOf(r)}));
@@ -281,10 +296,13 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
     const isCf=conflictIdxs.has(b.idx);
     const tone=isCf?{bg:"#FFF1F3",text:"#B42318",border:"#FDA29B",line:"#F04438"}:getGubunTone(b.구분,b);
     const prep=isPrepBlock(b);
-    const content=(b.내용||b.주제||"-").trim();
-    const sub=(b.주제&&b.내용&&b.주제!==b.내용?b.주제:"").trim();
+    const subject=(b.주제||"").trim();
+    const desc=(b.내용||"").trim();
+    const mainTitle=(subject||desc||"-").trim();
+    const detail=(desc&&desc!==subject?desc:"").trim();
     const pos=eventStyle(b);
-    const titleFont=content.length>22?10:content.length>14?11:12;
+    const isLive=b.날짜===todayStr&&!prep&&toMin(b.시작시간)!==null&&toMin(b.종료시간)!==null&&toMin(b.시작시간)<=nowMin&&toMin(b.종료시간)>nowMin;
+    const titleFont=mainTitle.length>22?10:mainTitle.length>14?11:12;
     return(
       <div
         style={{
@@ -302,21 +320,25 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
           overflow:"hidden",
           zIndex:8,
           cursor:"pointer",
-          boxShadow:"0 2px 5px rgba(16,24,40,0.06)",
+          boxShadow:isLive?"0 0 0 2px rgba(18,183,106,.18), 0 8px 18px rgba(18,183,106,.18)":"0 2px 5px rgba(16,24,40,0.06)",
+          outline:isLive?"2px solid rgba(18,183,106,.45)":"none",
           transition:"transform .12s ease, box-shadow .12s ease",
         }}
-        title={`${b.장소} · ${content} · ${b.시작시간}~${b.종료시간}${b.강사명?` · ${b.강사명}`:""}`}
+        title={`${b.장소} · ${b.구분||"기타"} · ${mainTitle}${detail?` · ${detail}`:""} · ${b.시작시간}~${b.종료시간}${b.강사명?` · ${b.강사명}`:""}`}
         onClick={e=>{e.stopPropagation();setPopup({row:{...b,_conflict:isCf},idx:b.idx,x:e.clientX,y:e.clientY});}}
         onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=UI.shadowHover;}}
         onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 5px rgba(16,24,40,0.06)";}}
       >
-        <div style={{fontSize:10,fontWeight:950,color:tone.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.25}}>
-          {isCf&&"⚠ "}{prep?"방송준비":(b.구분||"기타")}
+        <div style={{display:"flex",alignItems:"center",gap:4,minWidth:0}}>
+          {isLive&&<span style={{fontSize:9,fontWeight:950,color:"#027A48",background:"#D1FADF",border:"1px solid #A6F4C5",borderRadius:999,padding:"0 5px",lineHeight:1.45,flexShrink:0}}>LIVE</span>}
+          <div style={{fontSize:10,fontWeight:950,color:tone.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.25,minWidth:0}}>
+            {isCf&&"⚠ "}{prep?"방송준비":(b.구분||"기타")}
+          </div>
         </div>
-        <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>{content}</div>
-        {pos.height>=58&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>{b.시작시간} ~ {b.종료시간}</div>}
-        {pos.height>=74&&b.강사명&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>👤 {b.강사명}</div>}
-        {pos.height>=92&&sub&&<div style={{fontSize:9,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>{sub}</div>}
+        <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>{mainTitle}</div>
+        {detail&&pos.height>=52&&<div style={{fontSize:10,fontWeight:750,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>📄 {detail}</div>}
+        {pos.height>=62&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>🕘 {b.시작시간} ~ {b.종료시간}</div>}
+        {pos.height>=78&&b.강사명&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>👤 {b.강사명}</div>}
       </div>
     );
   }
@@ -340,7 +362,7 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
           const startCol=2+di*visibleStudios.length;
           const endCol=startCol+visibleStudios.length;
           return(
-            <div key={day} style={{gridColumn:`${startCol} / ${endCol}`,gridRow:"1 / 2",position:"sticky",top:0,zIndex:35,background:isToday?"#F0F7FF":UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div key={day} ref={isToday?todayHeaderRef:null} style={{gridColumn:`${startCol} / ${endCol}`,gridRow:"1 / 2",position:"sticky",top:0,zIndex:35,background:isToday?"#F0F7FF":UI.surface,borderBottom:`1px solid ${UI.border}`,borderRight:`1px solid ${UI.border}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
               <div style={{fontSize:14,fontWeight:950,color:isToday?"#175CD3":UI.text}}>{fmtShort(addDays(monday,di))} ({day})</div>
               <div style={{fontSize:10,fontWeight:800,color:isToday?"#175CD3":UI.sub}}>{indexedRows.filter(r=>r.날짜===dayDates[di]).length}건</div>
             </div>
@@ -368,6 +390,12 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
               {timeRows.slice(0,-1).map((t,hi)=>(
                 <div key={t} onClick={()=>{if(canManage)onEmptySlot?.(studio,dayDates[di],t);}} title={canManage?`${studio} · ${dayDates[di]} ${t} 예약 등록`:undefined} style={{position:"absolute",left:0,right:0,top:hi*pxPerHour,height:pxPerHour,borderBottom:`1px solid ${UI.softBorder}`,cursor:canManage?"pointer":"default"}} />
               ))}
+              {isToday&&showNowLine&&(
+                <div style={{position:"absolute",left:0,right:0,top:nowLineTop,zIndex:18,pointerEvents:"none"}}>
+                  <div style={{height:2,background:"#F04438",boxShadow:"0 0 0 1px rgba(240,68,56,.12)"}} />
+                  {si===0&&<span style={{position:"absolute",left:4,top:-9,fontSize:9,fontWeight:950,color:"#B42318",background:"#FFF1F3",border:"1px solid #FDA29B",borderRadius:999,padding:"1px 5px"}}>NOW</span>}
+                </div>
+              )}
               {blocks.map((b,bi)=><ScheduleBlock key={`${b.idx}-${bi}`} b={b}/>) }
             </div>
           );
