@@ -259,8 +259,6 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
   const now=new Date();
   const todayStr=fmtFull(now);
   const nowMin=now.getHours()*60+now.getMinutes();
-  const showNowLine=nowMin>=startHour*60&&nowMin<=endHour*60;
-  const nowLineTop=clamp((nowMin-startHour*60)*pxPerMin,0,totalTimeHeight);
 
   useEffect(()=>{
     if(!todayHeaderRef.current)return;
@@ -390,12 +388,6 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
               {timeRows.slice(0,-1).map((t,hi)=>(
                 <div key={t} onClick={()=>{if(canManage)onEmptySlot?.(studio,dayDates[di],t);}} title={canManage?`${studio} · ${dayDates[di]} ${t} 예약 등록`:undefined} style={{position:"absolute",left:0,right:0,top:hi*pxPerHour,height:pxPerHour,borderBottom:`1px solid ${UI.softBorder}`,cursor:canManage?"pointer":"default"}} />
               ))}
-              {isToday&&showNowLine&&(
-                <div style={{position:"absolute",left:0,right:0,top:nowLineTop,zIndex:18,pointerEvents:"none"}}>
-                  <div style={{height:2,background:"#F04438",boxShadow:"0 0 0 1px rgba(240,68,56,.12)"}} />
-                  {si===0&&<span style={{position:"absolute",left:4,top:-9,fontSize:9,fontWeight:950,color:"#B42318",background:"#FFF1F3",border:"1px solid #FDA29B",borderRadius:999,padding:"1px 5px"}}>NOW</span>}
-                </div>
-              )}
               {blocks.map((b,bi)=><ScheduleBlock key={`${b.idx}-${bi}`} b={b}/>) }
             </div>
           );
@@ -791,10 +783,13 @@ export default function App(){
   const studioStats=detectedStudios.map(sid=>({id:sid,color:getColor(sid),count:rows.filter(r=>r.장소===sid).length,cf:conflicts.filter(c=>c.studio===sid).length}));
   const conflictIdxSet=new Set(conflicts.flatMap(c=>[c.a,c.b]));
   // 스케줄 목록 필터 (스튜디오 + 학기 + 날짜) + 날짜순 정렬
+  const selectedWeekEnd=fmtFull(addDays(monday,4));
   const filteredRows=[...rows]
     .filter(r=>filterStudio==="전체"||r.장소===filterStudio)
     .filter(r=>filterGubun==="전체"||r.구분===filterGubun)
-    .filter(r=>!filterDate||r.날짜===filterDate)
+    // 날짜를 직접 선택하지 않았을 때는 전체 목록을 5월 첫 데이터부터 보여주지 않고,
+    // 현재 대시보드에서 보고 있는 주간(월~금) 일정만 먼저 보여줍니다.
+    .filter(r=>filterDate ? r.날짜===filterDate : (r.날짜>=fmtFull(monday)&&r.날짜<=selectedWeekEnd))
     .sort((a,b)=>{
       const da=a.날짜||"",db=b.날짜||"";
       if(da!==db) return da.localeCompare(db);
