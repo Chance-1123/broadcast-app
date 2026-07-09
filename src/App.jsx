@@ -196,7 +196,7 @@ function CancelModal({row,onClose,onConfirm}){
         <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>예약을 취소하시겠습니까?</div>
         <div style={{fontSize:13,color:"#555",marginBottom:10,lineHeight:1.9,background:"#f8f8f6",borderRadius:8,padding:"10px 14px"}}>
           <div><b>스튜디오:</b> {row?.장소}</div><div><b>날짜:</b> {row?.날짜} {row?.요일&&`(${row.요일}요일)`}</div>
-          <div><b>시간:</b> {row?.시작시간} ~ {row?.종료시간}</div><div><b>내용:</b> {row?.내용||row?.주제||"-"}</div>
+          <div><b>시간:</b> {row?.시작시간} ~ {row?.종료시간}</div><div><b>주제:</b> {row?.주제||"-"}</div><div><b>내용:</b> {row?.내용||"-"}</div>
         </div>
         <div style={{background:"#FFF8F8",border:"0.5px solid #F09595",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#A32D2D",marginBottom:12}}>⚠ 취소된 예약은 복구할 수 없습니다.</div>
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
@@ -218,7 +218,7 @@ function BlockPopup({row,idx,pos,onClose,onEdit,onCancel,canManage=false}){
       </div>
       <div style={{fontSize:12,lineHeight:1.9,color:"#555",borderBottom:"0.5px solid #f0f0ee",paddingBottom:10,marginBottom:10}}>
         {row._conflict&&<div style={{color:"#E24B4A",fontWeight:600,marginBottom:4}}>⚠ 충돌</div>}
-        <div><b>구분:</b> {row.구분}</div><div><b>내용:</b> {row.내용||row.주제||"-"}</div>
+        <div><b>구분:</b> {row.구분}</div><div><b>주제:</b> {row.주제||"-"}</div><div><b>내용:</b> {row.내용||"-"}</div>
         {row.강사명&&<div><b>강사:</b> {row.강사명}</div>}
         <div><b>날짜:</b> {row.날짜} {row.요일&&`(${row.요일})`}</div><div><b>시간:</b> {row.시작시간} ~ {row.종료시간}</div>
       </div>
@@ -296,11 +296,12 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
     const prep=isPrepBlock(b);
     const subject=(b.주제||"").trim();
     const desc=(b.내용||"").trim();
-    const mainTitle=(subject||desc||"-").trim();
-    const detail=(desc&&desc!==subject?desc:"").trim();
+    const mainTitle=(subject||"주제 없음").trim();
+    const detail=(desc||"내용 없음").trim();
+    const compactText=subject&&desc?`${subject} · ${desc}`:(subject||desc||"-");
     const pos=eventStyle(b);
     const isLive=b.날짜===todayStr&&!prep&&toMin(b.시작시간)!==null&&toMin(b.종료시간)!==null&&toMin(b.시작시간)<=nowMin&&toMin(b.종료시간)>nowMin;
-    const titleFont=mainTitle.length>22?10:mainTitle.length>14?11:12;
+    const titleFont=compactText.length>32?9:compactText.length>22?10:compactText.length>14?11:12;
     return(
       <div
         style={{
@@ -333,10 +334,16 @@ function WeeklyGrid({rows,activeStudios,conflicts,monday,onEdit,onCancel,onEmpty
             {isCf&&"⚠ "}{prep?"방송준비":(b.구분||"기타")}
           </div>
         </div>
-        <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>{mainTitle}</div>
-        {detail&&pos.height>=52&&<div style={{fontSize:10,fontWeight:750,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>📄 {detail}</div>}
-        {pos.height>=62&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>🕘 {b.시작시간} ~ {b.종료시간}</div>}
-        {pos.height>=78&&b.강사명&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>👤 {b.강사명}</div>}
+        {pos.height<54 ? (
+          <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>{compactText}</div>
+        ) : (
+          <>
+            <div style={{fontSize:titleFont,fontWeight:950,color:UI.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3,marginTop:2}}>주제: {mainTitle}</div>
+            <div style={{fontSize:10,fontWeight:750,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>내용: {detail}</div>
+          </>
+        )}
+        {pos.height>=70&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>🕘 {b.시작시간} ~ {b.종료시간}</div>}
+        {pos.height>=86&&b.강사명&&<div style={{fontSize:10,fontWeight:800,color:UI.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:1.3}}>👤 {b.강사명}</div>}
       </div>
     );
   }
@@ -505,7 +512,8 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
 
   const EventCard=({row})=>{
     const color=conflictIdxs.has(row._idx)?UI.danger:getColor(row.장소);
-    const content=row.내용||row.주제||"내용 없음";
+    const subject=(row.주제||"주제 없음").trim();
+    const content=(row.내용||"내용 없음").trim();
     return(
       <div style={{...card,borderColor:conflictIdxs.has(row._idx)?"#FDA29B":`${color}33`,padding:"14px 14px",display:"flex",gap:12,alignItems:"stretch",background:conflictIdxs.has(row._idx)?"#FFF8F8":"#fff",minHeight:118}}>
         <div style={{width:4,borderRadius:999,background:color,flexShrink:0}}></div>
@@ -515,7 +523,8 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
             {row.구분&&<GubunBadge 구분={row.구분}/>} 
             {conflictIdxs.has(row._idx)&&<span style={bd("red")}>충돌</span>}
           </div>
-          <div style={{fontSize:15,fontWeight:900,color:UI.text,lineHeight:1.45,wordBreak:"keep-all",marginBottom:8}}>{content}</div>
+          <div style={{fontSize:15,fontWeight:900,color:UI.text,lineHeight:1.45,wordBreak:"keep-all",marginBottom:4}}>주제: {subject}</div>
+          <div style={{fontSize:13,fontWeight:750,color:UI.sub,lineHeight:1.45,wordBreak:"keep-all",marginBottom:8}}>내용: {content}</div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:12,color:UI.sub,fontWeight:700}}>
             <span>📍 {row.장소||"장소 미정"}</span>
             {row.강사명&&<span>👤 {row.강사명}</span>}
@@ -999,8 +1008,8 @@ export default function App(){
                 </div>
               </div>
               <div style={{...card,overflow:"auto",flex:"1 0 420px",minHeight:420,WebkitOverflowScrolling:"touch"}}>
-                <table style={{width:"100%",minWidth:isMobile?1040:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
-                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+                <table style={{width:"100%",minWidth:isMobile?1160:0,borderCollapse:"collapse",tableLayout:"fixed"}}>
+                  <thead><tr style={{background:"#F9FAFB",borderBottom:`1px solid ${UI.border}`}}>{["날짜","요일","구분","장소","주제","내용","강사명","시작","종료","길이","출처","상태","수정","취소"].map(h=><th key={h} style={{padding:"6px 8px",fontSize:13,fontWeight:800,color:UI.sub,textAlign:"left",borderRight:"0.5px solid #e5e5e3",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredRows.map((row,i)=>{
                       const realIdx=rows.indexOf(row);
@@ -1015,7 +1024,8 @@ export default function App(){
                           {td(row.날짜,{whiteSpace:"nowrap"})}{td(row.요일)}
                           {td(<span style={{color:isPrep?"#aaa":"inherit",fontWeight:isPrep?400:500}}>{row.구분}</span>)}
                           {td(row.장소?<span style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:isPrep?"#ccc":getColor(row.장소),flexShrink:0}}></span><span style={{color:isPrep?"#aaa":getColor(row.장소)}}>{row.장소}</span></span>:<span style={bd("amber")}>미입력</span>)}
-                          {td(row.내용||row.주제,{maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}
+                          {td(row.주제||"-",{maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}
+                          {td(row.내용||"-",{maxWidth:170,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}
                           {td(row.강사명,{maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"})}{td(row.시작시간)}{td(row.종료시간)}{td(row.길이)}
                           {td(<span style={bd(row._src==="manual"?"blue":"gray")}>{row._src==="manual"?"직접":"엑셀"}</span>)}
                           {td(isCf?<span style={bd("red")}>충돌</span>:isPrep?<span style={bd("gray")}>방송준비</span>:noSt?<span style={bd("amber")}>장소미정</span>:<span style={bd("green")}>확정</span>)}
