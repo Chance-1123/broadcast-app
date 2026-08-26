@@ -727,16 +727,38 @@ export default function App(){
 
   useEffect(()=>{
     async function load(){
+      const PAGE_SIZE=1000;
+      let from=0;
+      const allData=[];
+
       try{
-        const {data,error}=await supabase.from("bookings").select("*").order("created_at",{ascending:true});
-        if(error){
-          console.error("예약 데이터 조회 실패:",error);
-          alert(`예약 데이터를 불러오지 못했습니다.\n\n${error.message||"알 수 없는 오류"}`);
-          return;
+        while(true){
+          const {data,error}=await supabase
+            .from("bookings")
+            .select("*")
+            .order("created_at",{ascending:true})
+            .order("id",{ascending:true})
+            .range(from,from+PAGE_SIZE-1);
+
+          if(error){
+            console.error(`예약 데이터 조회 실패 (${from+1}~${from+PAGE_SIZE}):`,error);
+            alert(`예약 데이터를 불러오지 못했습니다.\n\n${error.message||"알 수 없는 오류"}`);
+            return;
+          }
+
+          const page=data||[];
+          allData.push(...page);
+
+          // 마지막 페이지가 1,000건보다 적으면 전체 조회 완료
+          if(page.length<PAGE_SIZE)break;
+
+          from+=PAGE_SIZE;
         }
-        const mapped=(data||[]).map(r=>({_id:r.id,구분:r.구분||"",장소:r.장소||"",주제:r.주제||"",내용:r.내용||"",강사명:r.강사명||"",날짜:r.날짜||"",요일:r.요일||"",시작시간:r.시작시간||"",종료시간:r.종료시간||"",길이:r.길이||"",_src:r.src||"manual"}));
+
+        const mapped=allData.map(r=>({_id:r.id,구분:r.구분||"",장소:r.장소||"",주제:r.주제||"",내용:r.내용||"",강사명:r.강사명||"",날짜:r.날짜||"",요일:r.요일||"",시작시간:r.시작시간||"",종료시간:r.종료시간||"",길이:r.길이||"",_src:r.src||"manual"}));
         setRows(mapped);
         setConflicts(detectConflicts(mapped));
+        console.info(`예약 데이터 ${mapped.length}건 로딩 완료`);
       }catch(error){
         console.error("예약 데이터 조회 예외:",error);
         alert(`예약 데이터를 불러오는 중 네트워크 오류가 발생했습니다.\n\n${error?.message||"잠시 후 다시 시도해주세요."}`);
