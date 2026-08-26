@@ -89,18 +89,30 @@ function BookingForm({initial,onSave,onClose,title}){
   const [customStudio,setCustomStudio]=useState(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)?initial.장소:"");
   const [useCustom,setUseCustom]=useState(!!(initial?.장소&&!STUDIOS.find(s=>s.id===initial.장소)));
   const [err,setErr]=useState("");
+  const [submitting,setSubmitting]=useState(false);
   const datePickerRef=useRef(null);
   function set(k,v){let value=k==="날짜"?normalizeDateInput(v):v;let u={...form,[k]:value};if(k==="날짜"&&value){u.요일=weekdayFromDateStr(value);}setForm(u);}
   function openNativePicker(e){try{e.currentTarget.showPicker?.();}catch(_){/* 일부 브라우저는 사용자 제스처 외 showPicker를 제한 */}}
   function handleDateChange(e){set("날짜",e.target.value);}
   function handleDateBlur(e){set("날짜",normalizeDateInput(e.target.value));}
   const len=calcLen(form.시작시간,form.종료시간);
-  function save(){
+  async function save(){
     const 장소=useCustom?customStudio.trim():form.장소;
     if(!장소)return setErr("스튜디오를 선택하거나 직접 입력해주세요");
     if(!form.날짜)return setErr("날짜를 입력해주세요");
     if(toMin(form.시작시간)>=toMin(form.종료시간))return setErr("종료 시간이 시작 시간보다 늦어야 합니다");
-    onSave({...form,장소,길이:len});onClose();
+    if(submitting)return;
+    setErr("");
+    setSubmitting(true);
+    try{
+      const ok=await onSave({...form,장소,길이:len});
+      if(ok!==false)onClose();
+    }catch(e){
+      console.error("예약 저장 처리 중 오류:",e);
+      setErr("예약 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }finally{
+      setSubmitting(false);
+    }
   }
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -181,7 +193,13 @@ function BookingForm({initial,onSave,onClose,title}){
           {err&&<div style={{fontSize:13,color:"#E24B4A",background:"#FFF0F0",padding:"8px 12px",borderRadius:8}}>{err}</div>}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:4,borderTop:"0.5px solid #f0f0ee"}}>
             <button style={btn} onClick={onClose}>취소</button>
-            <button style={btnP} onClick={save}>{title==="예약 수정"?"수정 저장":"예약 등록"}</button>
+            <button
+              style={{...btnP,opacity:submitting?0.65:1,cursor:submitting?"wait":"pointer"}}
+              onClick={save}
+              disabled={submitting}
+            >
+              {submitting?"저장 중...":title==="예약 수정"?"수정 저장":"예약 등록"}
+            </button>
           </div>
         </div>
       </div>
@@ -709,16 +727,124 @@ export default function App(){
 
   useEffect(()=>{
     async function load(){
-      const {data,error}=await supabase.from("bookings").select("*").order("created_at",{ascending:true});
-      if(!error&&data){const mapped=data.map(r=>({_id:r.id,구분:r.구분||"",장소:r.장소||"",주제:r.주제||"",내용:r.내용||"",강사명:r.강사명||"",날짜:r.날짜||"",요일:r.요일||"",시작시간:r.시작시간||"",종료시간:r.종료시간||"",길이:r.길이||"",_src:r.src||"manual"}));setRows(mapped);setConflicts(detectConflicts(mapped));}
+      try{
+        const {data,error}=await supabase.from("bookings").select("*").order("created_at",{ascending:true});
+        if(error){
+          console.error("예약 데이터 조회 실패:",error);
+          alert(`예약 데이터를 불러오지 못했습니다.\n\n${error.message||"알 수 없는 오류"}`);
+          return;
+        }
+        const mapped=(data||[]).map(r=>({_id:r.id,구분:r.구분||"",장소:r.장소||"",주제:r.주제||"",내용:r.내용||"",강사명:r.강사명||"",날짜:r.날짜||"",요일:r.요일||"",시작시간:r.시작시간||"",종료시간:r.종료시간||"",길이:r.길이||"",_src:r.src||"manual"}));
+        setRows(mapped);
+        setConflicts(detectConflicts(mapped));
+      }catch(error){
+        console.error("예약 데이터 조회 예외:",error);
+        alert(`예약 데이터를 불러오는 중 네트워크 오류가 발생했습니다.\n\n${error?.message||"잠시 후 다시 시도해주세요."}`);
+      }
     }
     load();
   },[]);
 
   function reCalc(newRows){setRows(newRows);setConflicts(detectConflicts(newRows));}
-  async function dbInsert(row){setSaving(true);const {data}=await supabase.from("bookings").insert([{구분:row.구분,장소:row.장소,주제:row.주제,내용:row.내용,강사명:row.강사명,날짜:row.날짜,요일:row.요일,시작시간:row.시작시간,종료시간:row.종료시간,길이:row.길이,src:row._src||"manual"}]).select();setSaving(false);return data?.[0];}
-  async function dbUpdate(id,row){setSaving(true);await supabase.from("bookings").update({구분:row.구분,장소:row.장소,주제:row.주제,내용:row.내용,강사명:row.강사명,날짜:row.날짜,요일:row.요일,시작시간:row.시작시간,종료시간:row.종료시간,길이:row.길이}).eq("id",id);setSaving(false);}
-  async function dbDelete(id){await supabase.from("bookings").delete().eq("id",id);}
+
+  function showDbError(action,error){
+    console.error(`${action} 실패:`,error);
+    const message=error?.message||error?.details||"알 수 없는 오류";
+    alert(`${action}에 실패했습니다.\n\n${message}\n\n화면에 임시 반영하지 않았습니다. 오류 내용을 확인한 뒤 다시 시도해주세요.`);
+  }
+
+  function bookingPayload(row){
+    return{
+      구분:row.구분,
+      장소:row.장소,
+      주제:row.주제,
+      내용:row.내용,
+      강사명:row.강사명,
+      날짜:row.날짜,
+      요일:row.요일,
+      시작시간:row.시작시간,
+      종료시간:row.종료시간,
+      길이:row.길이,
+      src:row._src||"manual"
+    };
+  }
+
+  async function dbInsert(row){
+    setSaving(true);
+    try{
+      const {data,error}=await supabase
+        .from("bookings")
+        .insert([bookingPayload(row)])
+        .select()
+        .single();
+      if(error){showDbError("예약 저장",error);return null;}
+      if(!data){
+        showDbError("예약 저장",new Error("저장 응답에 예약 데이터가 없습니다."));
+        return null;
+      }
+      return data;
+    }catch(error){
+      showDbError("예약 저장",error);
+      return null;
+    }finally{
+      setSaving(false);
+    }
+  }
+
+  async function dbUpdate(id,row){
+    if(id==null){
+      showDbError("예약 수정",new Error("예약 ID가 없습니다. 화면을 새로고침한 뒤 다시 시도해주세요."));
+      return null;
+    }
+    setSaving(true);
+    try{
+      const payload=bookingPayload(row);
+      delete payload.src;
+      const {data,error}=await supabase
+        .from("bookings")
+        .update(payload)
+        .eq("id",id)
+        .select()
+        .single();
+      if(error){showDbError("예약 수정",error);return null;}
+      if(!data){
+        showDbError("예약 수정",new Error("수정할 예약을 찾지 못했습니다."));
+        return null;
+      }
+      return data;
+    }catch(error){
+      showDbError("예약 수정",error);
+      return null;
+    }finally{
+      setSaving(false);
+    }
+  }
+
+  async function dbDelete(id){
+    if(id==null){
+      showDbError("예약 취소",new Error("예약 ID가 없습니다. 화면을 새로고침한 뒤 다시 시도해주세요."));
+      return false;
+    }
+    setSaving(true);
+    try{
+      const {data,error}=await supabase
+        .from("bookings")
+        .delete()
+        .eq("id",id)
+        .select("id");
+      if(error){showDbError("예약 취소",error);return false;}
+      if(!data||data.length===0){
+        showDbError("예약 취소",new Error("삭제할 예약을 찾지 못했습니다."));
+        return false;
+      }
+      return true;
+    }catch(error){
+      showDbError("예약 취소",error);
+      return false;
+    }finally{
+      setSaving(false);
+    }
+  }
 
   function handleFile(e){
     if(!requireAdmin("엑셀 업로드")){ if(e?.target) e.target.value=""; return; }
@@ -731,10 +857,33 @@ export default function App(){
         const ws=wb.Sheets[wb.SheetNames[0]];
         const raw=XLSX.utils.sheet_to_json(ws,{defval:"",raw:true});
         const parsed=raw.map(r=>{const 날짜=excelDateToStr(r["날짜"]||r["F"]||"");const 시작=excelTimeToStr(r["시작시간"]||r["H"]||"");const 종료=excelTimeToStr(r["종료시간"]||r["I"]||"");return{구분:String(r["구분"]||r["A"]||""),장소:normStudio(r["장소"]||r["B"]||""),주제:String(r["주제"]||r["C"]||""),내용:String(r["내용"]||r["D"]||""),강사명:String(r["강사명"]||r["E"]||""),날짜,요일:String(r["요일"]||r["G"]||""),시작시간:시작,종료시간:종료,길이:calcLen(시작,종료),_src:"excel"};}).filter(r=>(r.구분||r.주제||r.내용)&&r.날짜);
+        if(parsed.length===0){
+          setUploadState("error");
+          setParseLog(["❌ 저장 가능한 일정이 없습니다. 날짜/구분/주제/내용 값을 확인해주세요."]);
+          alert("엑셀에서 저장 가능한 일정을 찾지 못했습니다.");
+          return;
+        }
         setSaving(true);
-        const {data}=await supabase.from("bookings").insert(parsed.map(r=>({구분:r.구분,장소:r.장소,주제:r.주제,내용:r.내용,강사명:r.강사명,날짜:r.날짜,요일:r.요일,시작시간:r.시작시간,종료시간:r.종료시간,길이:r.길이,src:"excel"}))).select();
+        const {data,error}=await supabase
+          .from("bookings")
+          .insert(parsed.map(r=>({...bookingPayload({...r,_src:"excel"}),src:"excel"})))
+          .select();
         setSaving(false);
+        if(error){
+          console.error("엑셀 일괄 저장 실패:",error);
+          setUploadState("error");
+          setParseLog([
+            `❌ 엑셀 저장 실패`,
+            `원본 ${raw.length}행 / 파싱 ${parsed.length}행`,
+            `오류: ${error.message||"알 수 없는 오류"}`
+          ]);
+          alert(`엑셀 일괄 저장에 실패했습니다.\n\n${error.message||"알 수 없는 오류"}\n\nDB에는 반영되지 않았습니다.`);
+          return;
+        }
         const saved=(data||[]).map(r=>({_id:r.id,구분:r.구분,장소:r.장소,주제:r.주제,내용:r.내용,강사명:r.강사명,날짜:r.날짜,요일:r.요일,시작시간:r.시작시간,종료시간:r.종료시간,길이:r.길이,_src:"excel"}));
+        if(saved.length!==parsed.length){
+          console.warn(`엑셀 저장 건수 불일치: 요청 ${parsed.length}건 / 응답 ${saved.length}건`);
+        }
         const merged=[...rows,...saved];const cfls=detectConflicts(merged);
         reCalc(merged);setUploadState("done");
         const studios=[...new Set(saved.map(r=>r.장소).filter(Boolean))];
@@ -743,7 +892,13 @@ export default function App(){
         cfls.forEach(cf=>newN.push({id:Date.now()+Math.random(),type:"conflict",title:`⚠ 충돌 — ${cf.studio} · ${cf.date}`,desc:`${cf.timeA} ↔ ${cf.timeB}`,time:"방금",unread:true,rowA:cf.a,rowB:cf.b}));
         newN.push({id:Date.now(),type:"upload",title:`업로드 완료 — ${file.name}`,desc:`${studios.join(", ")} ${saved.length}건 저장됨`,time:"방금",unread:true});
         setNotifs(prev=>[...newN,...prev]);
-      }catch(err){setUploadState("error");setParseLog(["❌ 파싱 실패: "+err.message]);}
+      }catch(err){
+        setSaving(false);
+        setUploadState("error");
+        setParseLog(["❌ 업로드 실패: "+(err?.message||"알 수 없는 오류")]);
+        console.error("엑셀 업로드 처리 실패:",err);
+        alert(`엑셀 업로드 처리 중 오류가 발생했습니다.\n\n${err?.message||"알 수 없는 오류"}`);
+      }
     };
     reader.readAsBinaryString(file);
   }
@@ -763,26 +918,89 @@ export default function App(){
   }
 
   async function handleSave(form,editIdx){
-    if(!requireAdmin(editIdx!=null?"예약 수정":"예약 등록"))return;
+    if(!requireAdmin(editIdx!=null?"예약 수정":"예약 등록"))return false;
     if(hasBookingOverlap(form, editIdx)){
       alert("이미 같은 시간대에 예약된 일정이 있습니다.\n스튜디오와 날짜, 시간을 다시 확인한 뒤 예약해 주세요.");
+      return false;
+    }
+
+    if(editIdx!=null){
+      const target=rows[editIdx];
+      const updated=await dbUpdate(target?._id,form);
+      if(!updated)return false;
+      reCalc(rows.map((r,i)=>i===editIdx?{...r,...form,_id:updated.id}:r));
+      setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 수정 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);
+      return true;
+    }
+
+    const saved=await dbInsert({...form,_src:"manual"});
+    if(!saved)return false;
+    reCalc([...rows,{...form,_id:saved.id,_src:saved.src||"manual"}]);
+    setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 등록 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);
+    return true;
+  }
+
+  async function handleReject(rowIdx){
+    const target=rows[rowIdx];
+    const ok=await dbDelete(target?._id);
+    if(!ok)return;
+    reCalc(rows.filter((_,i)=>i!==rowIdx));
+    setNotifs(prev=>prev.map(n=>(n.rowA===rowIdx||n.rowB===rowIdx)?{...n,resolved:true,unread:false}:n));
+  }
+
+  async function confirmCancel(){
+    if(!requireAdmin("예약 취소")){setCancelTarget(null);return;}
+    if(cancelTarget===null)return;
+    const c=rows[cancelTarget];
+    const ok=await dbDelete(c?._id);
+    if(!ok)return;
+    reCalc(rows.filter((_,i)=>i!==cancelTarget));
+    setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);
+    setCancelTarget(null);
+  }
+
+  async function cancelAllConflicts(){
+    if(!requireAdmin("충돌 일괄 취소"))return;
+    const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));
+    const targets=rows.map((r,i)=>({r,i})).filter(({i})=>cfIdxs.has(i));
+    const ids=targets.map(({r})=>r._id).filter(id=>id!=null);
+    if(ids.length!==targets.length){
+      alert("일부 예약의 DB ID를 확인할 수 없습니다. 새로고침 후 다시 시도해주세요.");
       return;
     }
-    if(editIdx!=null){const target=rows[editIdx];await dbUpdate(target._id,form);reCalc(rows.map((r,i)=>i===editIdx?{...r,...form}:r));setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 수정 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
-    else{const saved=await dbInsert({...form,_src:"manual"});reCalc([...rows,{...form,_id:saved?.id,_src:"manual"}]);setNotifs(prev=>[{id:Date.now(),type:"manual",title:`예약 등록 — ${form.장소}`,desc:`${form.날짜} ${form.시작시간}~${form.종료시간}`,time:"방금",unread:true},...prev]);}
+    setSaving(true);
+    try{
+      const {data,error}=await supabase.from("bookings").delete().in("id",ids).select("id");
+      if(error){showDbError("충돌 예약 일괄 취소",error);return;}
+      if((data||[]).length!==ids.length){
+        showDbError("충돌 예약 일괄 취소",new Error(`삭제 요청 ${ids.length}건 중 ${(data||[]).length}건만 확인되었습니다.`));
+        return;
+      }
+      reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));
+      setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${targets.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);
+    }catch(error){
+      showDbError("충돌 예약 일괄 취소",error);
+    }finally{
+      setSaving(false);
+    }
   }
-  async function handleReject(rowIdx){const target=rows[rowIdx];if(target._id)await dbDelete(target._id);reCalc(rows.filter((_,i)=>i!==rowIdx));setNotifs(prev=>prev.map(n=>(n.rowA===rowIdx||n.rowB===rowIdx)?{...n,resolved:true,unread:false}:n));}
-  async function confirmCancel(){if(!requireAdmin("예약 취소")){setCancelTarget(null);return;}if(cancelTarget===null)return;const c=rows[cancelTarget];if(c._id)await dbDelete(c._id);reCalc(rows.filter((_,i)=>i!==cancelTarget));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`예약 취소 — ${c?.장소||""}`,desc:`${c?.날짜} ${c?.시작시간}~${c?.종료시간} 취소됨`,time:"방금",unread:true},...prev]);setCancelTarget(null);}
-  async function cancelAllConflicts(){if(!requireAdmin("충돌 일괄 취소"))return;const cfIdxs=new Set(conflicts.flatMap(c=>[c.a,c.b]));const removed=rows.filter((_,i)=>cfIdxs.has(i));for(const r of removed){if(r._id)await dbDelete(r._id);}reCalc(rows.filter((_,i)=>!cfIdxs.has(i)));setNotifs(prev=>[{id:Date.now(),type:"cancel",title:`충돌 일괄 취소 — ${removed.length}건`,desc:`전체 제거됨`,time:"방금",unread:true},...prev]);}
   async function resetAllData(){
     if(!requireAdmin("전체 초기화"))return;
     const pw=window.prompt("초기화를 진행하려면 초기화 PW를 입력하세요.");
     if(pw===null)return;
     if(pw!==RESET_PASSWORD){alert("초기화 PW가 일치하지 않습니다.");return;}
     if(!window.confirm("저장된 모든 예약 데이터를 초기화하시겠습니까? 이 작업은 복구할 수 없습니다."))return;
-    await supabase.from("bookings").delete().neq("id",0);
-    reCalc([]);
-    setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);
+    setSaving(true);
+    try{
+      const {error}=await supabase.from("bookings").delete().not("id","is",null);
+      if(error){showDbError("전체 초기화",error);return;}
+      reCalc([]);
+      setNotifs([{id:0,type:"info",title:"초기화 완료",desc:"모든 데이터가 삭제되었습니다.",time:"방금",unread:false}]);
+    }catch(error){
+      showDbError("전체 초기화",error);
+    }finally{
+      setSaving(false);
+    }
   }
 
   const monday=addDays(getThisWeekMonday(),weekOffset*7);
