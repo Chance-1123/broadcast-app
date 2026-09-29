@@ -83,6 +83,16 @@ const btnGhost={...btnLg,background:"#fff",color:UI.text};
 const disabledAdminStyle={opacity:0.42,cursor:"not-allowed",filter:"grayscale(0.25)"};
 const adminLockedTitle="관리자 로그인 후 사용할 수 있습니다.";
 
+function isNoticeActiveNow(notice){
+  if(!notice?.is_active)return false;
+  const content=String(notice?.content||"").trim();
+  if(!content)return false;
+  const today=fmtFull(new Date());
+  if(notice?.start_date&&today<notice.start_date)return false;
+  if(notice?.end_date&&today>notice.end_date)return false;
+  return true;
+}
+
 
 function BookingForm({initial,onSave,onClose,title}){
   const [form,setForm]=useState(initial||{장소:"",날짜:"",구분:"1학기",주제:"",내용:"",강사명:"",시작시간:"09:00",종료시간:"18:00",요일:""});
@@ -589,6 +599,125 @@ function MobileAgendaView({rows, activeStudios, conflicts, monday, mode, onEdit,
   );
 }
 
+
+function NoticePopup({notice,onClose}){
+  if(!notice)return null;
+  return(
+    <div
+      style={{position:"fixed",inset:0,background:"rgba(16,24,40,0.52)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5000,padding:20}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}
+    >
+      <div style={{width:520,maxWidth:"100%",maxHeight:"82vh",background:"#fff",borderRadius:22,border:`1px solid ${UI.border}`,boxShadow:"0 28px 80px rgba(16,24,40,0.28)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 22px 16px",borderBottom:`1px solid ${UI.border}`,background:"linear-gradient(180deg,#F8FFFC,#FFFFFF)"}}>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
+            <div style={{minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                <span style={{width:28,height:28,borderRadius:10,background:"#E8F8F1",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15}}>📢</span>
+                <span style={{fontSize:12,fontWeight:900,color:UI.primary,letterSpacing:".3px"}}>NOTICE</span>
+              </div>
+              <div style={{fontSize:20,fontWeight:950,color:UI.text,lineHeight:1.35,wordBreak:"keep-all"}}>{notice.title||"공지사항"}</div>
+            </div>
+            <button style={{...btnGhost,width:34,height:34,padding:0,justifyContent:"center",fontSize:16,flexShrink:0}} onClick={onClose}>✕</button>
+          </div>
+          {(notice.start_date||notice.end_date)&&(
+            <div style={{marginTop:9,fontSize:12,color:UI.sub,fontWeight:750}}>
+              게시기간 · {notice.start_date||"-"} ~ {notice.end_date||"-"}
+            </div>
+          )}
+        </div>
+        <div style={{padding:"22px",overflowY:"auto",fontSize:15,lineHeight:1.8,color:"#344054",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+          {notice.content}
+        </div>
+        <div style={{padding:"14px 22px 18px",borderTop:`1px solid ${UI.softBorder}`,display:"flex",justifyContent:"flex-end"}}>
+          <button style={{...btnPrimary,height:38,padding:"0 20px"}} onClick={onClose}>확인</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NoticeAdminModal({notice,onClose,onSave}){
+  const today=fmtFull(new Date());
+  const defaultEnd=fmtFull(addDays(new Date(),7));
+  const [form,setForm]=useState({
+    title:notice?.title||"공지사항",
+    content:notice?.content||"",
+    start_date:notice?.start_date||today,
+    end_date:notice?.end_date||defaultEnd,
+    is_active:notice?.is_active!==false,
+  });
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+
+  async function submit(){
+    const title=String(form.title||"").trim()||"공지사항";
+    const content=String(form.content||"").trim();
+    if(!content){setErr("공지 내용을 입력해주세요.");return;}
+    if(!form.start_date||!form.end_date){setErr("게시 시작일과 종료일을 모두 선택해주세요.");return;}
+    if(form.start_date>form.end_date){setErr("게시 종료일은 시작일보다 빠를 수 없습니다.");return;}
+    setBusy(true);setErr("");
+    const result=await onSave({...form,title,content});
+    setBusy(false);
+    if(result?.error)setErr(result.error.message||"공지 저장에 실패했습니다.");
+  }
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(16,24,40,0.52)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5100,padding:20}} onClick={e=>{if(e.target===e.currentTarget&&!busy)onClose();}}>
+      <div style={{width:620,maxWidth:"100%",maxHeight:"90vh",background:"#fff",borderRadius:22,border:`1px solid ${UI.border}`,boxShadow:"0 28px 80px rgba(16,24,40,0.28)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 22px",borderBottom:`1px solid ${UI.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          <div>
+            <div style={{fontSize:19,fontWeight:950,color:UI.text}}>📢 공지 팝업 관리</div>
+            <div style={{fontSize:12,color:UI.sub,marginTop:5}}>게시 기간 동안 사용자가 대시보드에 접속하면 첫 화면에 공지 팝업이 표시됩니다.</div>
+          </div>
+          <button style={{...btnGhost,width:34,height:34,padding:0,justifyContent:"center"}} onClick={onClose} disabled={busy}>✕</button>
+        </div>
+
+        <div style={{padding:22,display:"flex",flexDirection:"column",gap:15,overflowY:"auto"}}>
+          <label style={{display:"flex",alignItems:"center",gap:9,padding:"10px 12px",borderRadius:12,background:"#F8FAFC",border:`1px solid ${UI.border}`,fontSize:13,fontWeight:800,color:UI.text,cursor:"pointer"}}>
+            <input type="checkbox" checked={form.is_active} onChange={e=>setForm(f=>({...f,is_active:e.target.checked}))}/>
+            공지 팝업 게시 활성화
+            <span style={{marginLeft:"auto",fontSize:11,color:form.is_active?"#027A48":UI.mute,fontWeight:900}}>{form.is_active?"게시 ON":"게시 OFF"}</span>
+          </label>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <span style={lbl}>게시 시작일 *</span>
+              <input type="date" style={{...inp,height:40}} value={form.start_date} onChange={e=>setForm(f=>({...f,start_date:e.target.value}))}/>
+            </div>
+            <div>
+              <span style={lbl}>게시 종료일 *</span>
+              <input type="date" style={{...inp,height:40}} value={form.end_date} onChange={e=>setForm(f=>({...f,end_date:e.target.value}))}/>
+            </div>
+          </div>
+
+          <div>
+            <span style={lbl}>공지 제목</span>
+            <input style={{...inp,height:40,fontSize:14}} value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="예: 스튜디오 이용 안내"/>
+          </div>
+
+          <div>
+            <span style={lbl}>공지 내용 *</span>
+            <textarea
+              style={{...inp,height:190,padding:"12px 13px",fontSize:14,lineHeight:1.65,resize:"vertical"}}
+              value={form.content}
+              onChange={e=>setForm(f=>({...f,content:e.target.value}))}
+              placeholder={"공지 내용을 입력하세요.\n줄바꿈도 그대로 팝업에 표시됩니다."}
+            />
+            <div style={{fontSize:11,color:UI.mute,marginTop:5,textAlign:"right"}}>{form.content.length}자</div>
+          </div>
+
+          {err&&<div style={{fontSize:13,color:UI.danger,background:"#FFF1F0",border:"1px solid #FDA29B",borderRadius:10,padding:"9px 11px",lineHeight:1.5}}>{err}</div>}
+        </div>
+
+        <div style={{padding:"14px 22px 18px",borderTop:`1px solid ${UI.border}`,display:"flex",justifyContent:"flex-end",gap:8}}>
+          <button style={{...btnGhost,height:38}} onClick={onClose} disabled={busy}>취소</button>
+          <button style={{...btnPrimary,height:38,minWidth:104,justifyContent:"center"}} onClick={submit} disabled={busy}>{busy?"저장 중...":"공지 저장"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminLoginModal({onClose,onLogin}){
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
@@ -641,9 +770,36 @@ export default function App(){
   const [adminUser,setAdminUser]=useState(null);
   const [adminRole,setAdminRole]=useState("viewer");
   const [showAdminLogin,setShowAdminLogin]=useState(false);
+  const [notice,setNotice]=useState(null);
+  const [showNoticePopup,setShowNoticePopup]=useState(false);
+  const [showNoticeAdmin,setShowNoticeAdmin]=useState(false);
   const fileRef=useRef();
   const [isMobile,setIsMobile]=useState(()=>typeof window!=="undefined"&&window.innerWidth<=900);
   const [mobileAgendaMode,setMobileAgendaMode]=useState("today");
+
+  useEffect(()=>{
+    let alive=true;
+    async function loadNotice(){
+      try{
+        const {data,error}=await supabase
+          .from("site_notice")
+          .select("*")
+          .eq("id",1)
+          .maybeSingle();
+        if(!alive)return;
+        if(error){
+          console.warn("공지 데이터 조회 실패:",error);
+          return;
+        }
+        setNotice(data||null);
+        if(isNoticeActiveNow(data))setShowNoticePopup(true);
+      }catch(error){
+        console.warn("공지 데이터 조회 예외:",error);
+      }
+    }
+    loadNotice();
+    return()=>{alive=false;};
+  },[]);
 
   useEffect(()=>{
     const onResize=()=>setIsMobile(window.innerWidth<=900);
@@ -1025,6 +1181,54 @@ export default function App(){
     }
   }
 
+  async function saveSiteNotice(form){
+    if(!requireAdmin("공지 관리"))return {error:{message:"관리자 로그인 후 사용할 수 있습니다."}};
+    setSaving(true);
+    try{
+      const payload={
+        id:1,
+        title:String(form.title||"공지사항").trim()||"공지사항",
+        content:String(form.content||"").trim(),
+        start_date:form.start_date,
+        end_date:form.end_date,
+        is_active:!!form.is_active,
+        updated_at:new Date().toISOString(),
+        updated_by:adminUser?.id||null,
+      };
+      const {data,error}=await supabase
+        .from("site_notice")
+        .upsert(payload,{onConflict:"id"})
+        .select()
+        .single();
+
+      if(error){
+        console.error("공지 저장 실패:",error);
+        return {error};
+      }
+
+      setNotice(data);
+      setShowNoticeAdmin(false);
+      if(isNoticeActiveNow(data))setShowNoticePopup(true);
+      else setShowNoticePopup(false);
+
+      setNotifs(prev=>[{
+        id:Date.now(),
+        type:"manual",
+        title:"공지 팝업 저장 완료",
+        desc:`${data.start_date||"-"} ~ ${data.end_date||"-"} · ${data.is_active?"게시 ON":"게시 OFF"}`,
+        time:"방금",
+        unread:true
+      },...prev]);
+
+      return {data};
+    }catch(error){
+      console.error("공지 저장 예외:",error);
+      return {error:{message:error?.message||"공지 저장 중 오류가 발생했습니다."}};
+    }finally{
+      setSaving(false);
+    }
+  }
+
   const monday=addDays(getThisWeekMonday(),weekOffset*7);
   const weekLabel=`${monday.getMonth()+1}월 ${fmtShort(monday)}(월) ~ ${fmtShort(addDays(monday,4))}(금)`;
   const unread=notifs.filter(n=>n.unread).length;
@@ -1058,6 +1262,8 @@ export default function App(){
   return(
     <div style={{display:"flex",flexDirection:"column",width:"100vw",height:DASHBOARD_SHELL_HEIGHT,maxWidth:"100vw",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:isMobile?13:14,background:UI.bg,color:UI.text,overflow:"hidden",boxSizing:"border-box"}}>
       {showAdminLogin&&<AdminLoginModal onClose={()=>setShowAdminLogin(false)} onLogin={handleAdminLogin}/>}
+      {showNoticePopup&&isNoticeActiveNow(notice)&&<NoticePopup notice={notice} onClose={()=>setShowNoticePopup(false)}/>}
+      {isAdmin&&showNoticeAdmin&&<NoticeAdminModal notice={notice} onClose={()=>setShowNoticeAdmin(false)} onSave={saveSiteNotice}/>}
       {isAdmin&&(bookingModal==="new"||bookingModal?.mode==="new")&&<BookingForm title="예약 등록" initial={bookingModal?.initial||null} onSave={f=>handleSave(f,null)} onClose={()=>setBookingModal(null)}/>}
       {isAdmin&&typeof bookingModal==="number"&&<BookingForm title="예약 수정" initial={rows[bookingModal]} onSave={f=>handleSave(f,bookingModal)} onClose={()=>setBookingModal(null)}/>}
       {isAdmin&&cancelTarget!==null&&<CancelModal row={rows[cancelTarget]} onClose={()=>setCancelTarget(null)} onConfirm={confirmCancel}/>}
@@ -1082,7 +1288,16 @@ export default function App(){
             </div>
           )}
           {isAdmin ? (
-            <button style={{...btnGhost,height:34,fontSize:12,padding:"0 12px",fontWeight:900}} onClick={handleAdminLogout}>관리자 로그아웃</button>
+            <>
+              <button
+                style={{...btnBlue,height:34,fontSize:12,padding:isMobile?"0 10px":"0 12px",fontWeight:900}}
+                onClick={()=>setShowNoticeAdmin(true)}
+                title="공지 팝업 게시기간과 내용을 관리합니다."
+              >
+                {isMobile?"📢":"📢 공지 관리"}
+              </button>
+              <button style={{...btnGhost,height:34,fontSize:12,padding:"0 12px",fontWeight:900}} onClick={handleAdminLogout}>관리자 로그아웃</button>
+            </>
           ) : (
             <button style={{...btnPrimary,height:34,fontSize:12,padding:"0 12px"}} onClick={()=>setShowAdminLogin(true)}>관리자 로그인</button>
           )}
